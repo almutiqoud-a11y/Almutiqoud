@@ -11,46 +11,50 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="auction">
-<div class="wrap" style="padding-top:28px">
-  <div class="layout">
-    <main>
-      <div class="stage" id="stage" style="background-image:url(hall.jpg)">
-        <div class="live-badges"><span class="live-badge" id="liveBadge">مباشر</span><span class="dark-badge" id="lotOf">—</span></div>
-        <div class="cap"><span style="color:#E3C789;font-size:14px" id="lotOrigin"></span><b id="lotName">—</b></div>
-      </div>
+<div class="wrap" style="padding-top:24px">
 
-      <div class="screen" aria-live="polite">
-        <div class="now"><span style="color:#6B5236">السعر الحالي</span><b><span id="price">—</span> <span style="font-size:24px">ريال</span></b>
-          <span style="color:#6B5236">آخر مزايدة من الرقم <strong id="leader1" style="color:var(--text)">—</strong></span></div>
-        <div class="board">
-          <div class="h">المشتري<small>Buyer</small></div><div class="h">آخر سعر<small>Last Bid</small></div><div class="h">أقل سعر<small>Lowest Bid</small></div><div class="h">الوقت المتبقي<small>Remaining Time</small></div>
+  <section class="platform" aria-label="منصة المزاد">
+    <div class="hallstage">
+      <img src="stage.jpg" alt="قاعة مزاد المعتق للعود">
+      <div class="scr" aria-live="polite">
+        <div class="top"><b id="lotName">—</b><span style="display:flex;gap:1.5cqw;align-items:center;flex:none"><span id="lotOf" style="color:#6B5236"></span><span class="lv" id="liveBadge">مباشر</span></span></div>
+        <div class="now"><small>السعر الحالي</small><strong><span id="price">—</span> <span class="u">ريال</span></strong><em>آخر مزايدة من الرقم <b id="leader1">—</b></em></div>
+        <div class="tbl">
+          <div class="h">المشتري<i>Buyer</i></div><div class="h">آخر سعر<i>Last Bid</i></div><div class="h">أقل سعر<i>Lowest Bid</i></div><div class="h">الوقت المتبقي<i>Remaining Time</i></div>
           <div class="v" id="leader2">—</div><div class="v" id="price2">—</div><div class="v" id="open">—</div><div class="v" id="timer">--:--</div>
         </div>
       </div>
+    </div>
 
-      <div class="panel" style="margin-top:20px"><div class="specs">
+    <div class="audience" id="paddles" aria-label="مضارب المزايدين"></div>
+
+    <div class="controls">
+      <div class="grp">
+        <span class="lbl">الزيادة</span>
+        <span class="grp" id="incs"></span>
+      </div>
+      <div class="nb"><span class="lbl">مزايدتك ستكون</span><b><span id="next">—</span> ريال</b></div>
+      <div class="grp">
+        <span class="st-line" id="status"></span>
+        <button class="bid-paddle" id="bidBtn"><span class="pn" id="myPaddle">؟</span>ارفع مضربي</button>
+      </div>
+      <div class="msg err hidden" id="bidErr"></div>
+    </div>
+  </section>
+
+  <div class="layout" style="margin-top:24px">
+    <main>
+      <div class="panel"><div class="specs">
         <div><small>المنشأ</small><b id="sOrigin">—</b></div>
         <div><small>الوزن</small><b id="sWeight">—</b></div>
         <div><small>مدة التعتيق</small><b id="sAge">—</b></div>
         <div><small>عدد المزايدات</small><b id="sBids">—</b></div>
       </div></div>
-
       <h2 style="font-size:24px;color:var(--gold-dark);margin:28px 0 14px">القطع التالية</h2>
       <div class="queue" id="queue"></div>
+      <p class="muted" style="font-size:13px;margin-top:18px">كل مزايدة ملزمة. أي مزايدة في آخر 30 ثانية تمدّد الوقت حتى يتسنى للجميع الرد. <a href="terms.html">شروط المزاد</a></p>
     </main>
-
-    <aside style="display:flex;flex-direction:column;gap:20px">
-      <section class="panel gold" aria-label="لوحة المزايدة">
-        <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">زايد الآن</h2><span id="status" style="font-weight:600;font-size:14px"></span></div>
-        <div id="bidBox" class="form" style="margin-top:14px">
-          <span class="muted" style="font-size:14px">اختر مقدار الزيادة</span>
-          <div class="incs" id="incs"></div>
-          <div class="next-bid"><span class="muted">مزايدتك ستكون</span><b><span id="next">—</span> ريال</b></div>
-          <button class="btn btn-gold bid-btn" id="bidBtn"><span id="myPaddle">؟</span>ارفع رقمي</button>
-          <div class="msg err hidden" id="bidErr"></div>
-          <p class="muted" style="margin:0;font-size:13px">كل مزايدة ملزمة. أي مزايدة في آخر 30 ثانية تمدّد الوقت حتى يتسنى للجميع الرد. <a href="terms.html">شروط المزاد</a></p>
-        </div>
-      </section>
+    <aside>
       <section class="panel" aria-label="سجل المزايدات">
         <h2>سجل المزايدات</h2>
         <div id="log"></div>
@@ -64,7 +68,7 @@ import { watchAuction, watchLot, watchLots, watchBids, placeBid } from './db.js'
 import { AUCTION } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
-let lot = null, inc = AUCTION.increments[1] ?? AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null;
+let lot = null, bids = [], inc = AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null, lastLeader = null;
 
 $('incs').innerHTML = AUCTION.increments.map((v) => `<button class="inc" data-v="${v}">+${fmt(v)}</button>`).join('');
 const paintIncs = () => $('incs').querySelectorAll('.inc').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.v === inc));
@@ -76,10 +80,12 @@ watchAuction(async (a) => {
   const id = a?.currentLotId || null;
   if (id === curId) return;
   curId = id; unLot && unLot(); unBids && unBids();
-  if (!id) { lot = null; paint(); return; }
-  unLot = await watchLot(id, (l) => { lot = l; paint(); });
+  if (!id) { lot = null; bids = []; paint(); paintPaddles(); return; }
+  unLot = await watchLot(id, (l) => { lot = l; paint(); paintPaddles(); });
   unBids = await watchBids(id, (bs) => {
+    bids = bs;
     $('log').innerHTML = bs.length ? bs.map((b) => `<div class="log-row"><span><span class="p">${esc(b.paddle)}</span><span class="muted" style="font-size:13px">${ago(b.at)}</span></span><b>${fmt(b.amount)} ريال</b></div>`).join('') : '<p class="muted">لا توجد مزايدات بعد — كن الأول.</p>';
+    paintPaddles();
   });
 });
 
@@ -88,20 +94,38 @@ watchLots((ls) => {
   $('queue').innerHTML = q.length ? q.map((l) => `<div class="q"><div class="thumb">${l.image ? `<img src="${esc(l.image)}" alt="">` : ''}</div><div><div class="muted" style="font-size:12px">القطعة ${esc(l.no)}</div><b style="font-size:15px">${esc(l.name)}</b><div class="gold" style="font-size:13px">يبدأ من ${fmt(l.openPrice)}${l.openPrice != null ? ' ريال' : ''}</div></div></div>`).join('') : '<p class="muted">لا توجد قطع أخرى في هذا المزاد.</p>';
 });
 
-onCurrentUser(() => paint());
+onCurrentUser(() => { paint(); paintPaddles(); });
 
 function ago(t) { if (!t) return 'الآن'; const s = Math.round((Date.now() - t) / 1000); return s < 10 ? 'الآن' : s < 60 ? `قبل ${s} ث` : s < 3600 ? `قبل ${Math.round(s / 60)} د` : `قبل ${Math.round(s / 3600)} س`; }
+
+// مضارب المزايدين: آخر من زايد، والأعلى مرفوع بالذهبي
+function paintPaddles() {
+  const seen = new Set(), list = [];
+  for (const b of bids) { if (!seen.has(b.paddle)) { seen.add(b.paddle); list.push(b); } if (list.length >= 9) break; }
+  const leader = lot?.leaderPaddle ?? null;
+  if (leader != null && !seen.has(leader)) list.unshift({ paddle: leader });
+  const me = currentUser?.paddle;
+  // الأعلى في المنتصف
+  const others = list.filter((b) => b.paddle !== leader);
+  const half = Math.ceil(others.length / 2);
+  const ordered = [...others.slice(0, half).reverse(), ...(leader != null ? [{ paddle: leader }] : []), ...others.slice(half)];
+  const raise = leader !== lastLeader; lastLeader = leader;
+  $('paddles').innerHTML = ordered.length ? ordered.map((b) => {
+    const isL = b.paddle === leader, isMe = me != null && b.paddle === me;
+    return `<div class="paddle ${isL ? 'lead' : ''} ${isL && raise ? 'raise' : ''} ${isMe ? 'me' : ''}"><span class="card">${esc(b.paddle)}</span><span class="stick"></span><small>${isL ? 'الأعلى' : isMe ? 'أنت' : ''}</small></div>`;
+  }).join('') : '<p style="color:#BFAE95;align-self:center;padding-bottom:14px">بانتظار أول مضرب…</p>';
+}
 
 function paint() {
   const u = currentUser;
   $('myPaddle').textContent = u?.paddle ?? '؟';
   if (!lot) {
-    ['lotName', 'price', 'price2', 'leader1', 'leader2', 'open'].forEach((k) => ($(k).textContent = '—'));
-    $('lotOf').textContent = 'لا يوجد مزاد مباشر الآن'; $('liveBadge').classList.add('hidden');
-    $('bidBtn').disabled = true; $('status').textContent = ''; return;
+    ['price', 'price2', 'leader1', 'leader2', 'open'].forEach((k) => ($(k).textContent = '—'));
+    $('lotName').textContent = 'لا يوجد مزاد مباشر الآن'; $('lotOf').textContent = '';
+    $('liveBadge').classList.add('hidden'); $('bidBtn').disabled = true; $('status').textContent = ''; return;
   }
   const price = lot.currentPrice ?? lot.openPrice;
-  $('lotName').textContent = lot.name; $('lotOrigin').textContent = lot.origin ? 'المنشأ: ' + lot.origin : '';
+  $('lotName').textContent = lot.name;
   $('lotOf').textContent = `القطعة ${lot.no}${lotTotal ? ' من ' + lotTotal : ''}`;
   $('price').textContent = $('price2').textContent = fmt(price);
   $('leader1').textContent = $('leader2').textContent = lot.leaderPaddle ?? '—';
@@ -110,10 +134,11 @@ function paint() {
   $('next').textContent = fmt((price || 0) + inc);
   const live = lot.status === 'live' && Date.now() < lot.endsAt;
   $('liveBadge').classList.toggle('hidden', !live);
-  if (!u) { $('status').textContent = 'سجّل للمزايدة'; $('status').style.color = 'var(--muted)'; }
-  else if (!live) { $('status').textContent = lot.status === 'sold' ? 'بيعت' : 'انتهى الوقت'; $('status').style.color = 'var(--muted)'; }
-  else if (lot.leaderUid === u.uid) { $('status').textContent = 'أنت الأعلى الآن'; $('status').style.color = 'var(--ok)'; }
-  else { $('status').textContent = lot.leaderUid ? 'تمت المزايدة عليك' : ''; $('status').style.color = 'var(--live)'; }
+  const st = $('status');
+  if (!u) { st.textContent = 'سجّل لتحصل على مضربك'; st.style.color = '#BFAE95'; }
+  else if (!live) { st.textContent = lot.status === 'sold' ? 'بيعت' : 'انتهى الوقت'; st.style.color = '#BFAE95'; }
+  else if (lot.leaderUid === u.uid) { st.textContent = 'أنت الأعلى الآن'; st.style.color = '#8FD19E'; }
+  else { st.textContent = lot.leaderUid ? 'تمت المزايدة عليك' : ''; st.style.color = '#F0A090'; }
   $('bidBtn').disabled = !live;
 }
 
@@ -121,7 +146,7 @@ setInterval(() => {
   if (!lot || !lot.endsAt) { $('timer').textContent = '--:--'; return; }
   const s = Math.max(0, Math.floor((lot.endsAt - Date.now()) / 1000));
   $('timer').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-  $('timer').style.color = s < 30 ? 'var(--live)' : 'var(--text)';
+  $('timer').style.color = s < 30 ? 'var(--live)' : '#1A110A';
   if (s === 0) paint();
 }, 500);
 
@@ -129,7 +154,7 @@ $('bidBtn').onclick = async () => {
   $('bidErr').classList.add('hidden');
   if (!currentUser) { openAuth('up'); return; }
   $('bidBtn').disabled = true;
-  try { const a = await placeBid(lot.id, inc, currentUser); toast('مزايدتك ' + fmt(a) + ' ريال'); }
+  try { const a = await placeBid(lot.id, inc, currentUser); toast('رفعت مضربك على ' + fmt(a) + ' ريال'); }
   catch (x) { $('bidErr').textContent = x.message?.includes('permission') ? 'تعذّرت المزايدة — حدّث الصفحة وحاول مرة أخرى' : x.message; $('bidErr').classList.remove('hidden'); }
   finally { paint(); }
 };

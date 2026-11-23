@@ -64,7 +64,7 @@ if (DEMO) setInterval(() => {
   const ps = [31, 54, 63, 77, 88, 105, 215];
   const p = ps[Math.floor(Math.random() * ps.length)];
   if (demo.user && l.leaderUid === 'me' && Math.random() > 0.5) return;
-  l.currentPrice += 500; l.leaderPaddle = p; l.leaderUid = 'x';
+  l.currentPrice += AUCTION.increments[Math.floor(Math.random() * AUCTION.increments.length)]; l.leaderPaddle = p; l.leaderUid = 'x';
   if (l.endsAt - Date.now() < AUCTION.antiSnipeSeconds * 1e3) l.endsAt = Date.now() + AUCTION.antiSnipeSeconds * 1e3;
   demo.bids.l3.unshift({ paddle: p, amount: l.currentPrice, at: Date.now() });
   demoEmit();

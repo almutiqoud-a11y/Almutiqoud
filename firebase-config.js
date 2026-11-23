@@ -15,7 +15,7 @@ export const ADMIN_EMAILS = ["almutiqoud@gmail.com"];
 
 // إعدادات المزاد
 export const AUCTION = {
-  increments: [100, 500, 1000],   // مقادير الزيادة بالريال
+  increments: [50, 100],          // مقادير الزيادة بالريال
   antiSnipeSeconds: 30           // أي مزايدة في آخر 30 ثانية تمدّد الوقت إلى 30 ثانية
 };
 
