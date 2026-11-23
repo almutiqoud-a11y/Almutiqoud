@@ -227,16 +227,18 @@ tbody tr:nth-child(even){background:var(--soft)}
 .scr .tbl .h i{display:block;font-style:normal;font-weight:400;font-size:2.3cqw;color:#D9CBB5}
 .scr .tbl .v{background:#fff;font-weight:700;font-size:5.2cqw;padding:1cqw .4cqw;border-left:1px solid #E2D2B4;line-height:1.2}
 .scr .tbl .v:last-child{border-left:0}
-.audience{background:linear-gradient(#24170D,#1A110A);border-top:1px solid #5A4128;padding:14px 16px 0;display:flex;gap:12px;align-items:flex-end;justify-content:center;min-height:118px;overflow-x:auto}
-.paddle{flex:none;display:flex;flex-direction:column;align-items:center;transition:transform .3s}
-.paddle .card{min-width:58px;height:50px;padding:0 8px;background:#F4EBDD;color:#1A110A;border-radius:10px;display:flex;align-items:center;justify-content:center;font:700 24px var(--fb);box-shadow:0 3px 0 rgba(0,0,0,.35)}
-.paddle .stick{width:8px;height:38px;background:linear-gradient(90deg,#6B4A2A,#8C6338,#6B4A2A);border-radius:0 0 4px 4px}
-.paddle small{font-size:11px;color:#BFAE95;margin-top:2px;height:16px}
-.paddle.lead{transform:translateY(-14px)}
-.paddle.lead .card{background:var(--gold);color:var(--on-gold);box-shadow:0 0 0 3px #F4EBDD,0 0 22px rgba(201,164,92,.8)}
-.paddle.me .card{outline:2px dashed #E3C789;outline-offset:2px}
-.paddle.raise{animation:raise .7s ease-out}
-@keyframes raise{0%{transform:translateY(30px)}60%{transform:translateY(-22px)}100%{transform:translateY(-14px)}}
+.audience{background:linear-gradient(#24170D,#1A110A);border-top:1px solid #5A4128;padding:34px 16px 6px;display:flex;gap:16px;align-items:flex-end;justify-content:center;min-height:200px;overflow-x:auto;overflow-y:hidden}
+.paddle{flex:none;position:relative;width:66px;display:flex;flex-direction:column;align-items:center;transition:transform .35s}
+.paddle img{width:100%;height:auto;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+.paddle .num{position:absolute;top:39%;left:0;right:0;text-align:center;font:700 22px var(--fh);color:#E3C789;text-shadow:0 1px 0 #3A2414,0 0 6px rgba(0,0,0,.4);line-height:1}
+.paddle small{font-size:11px;color:#BFAE95;margin-top:4px;height:16px;white-space:nowrap}
+.paddle.lead{transform:translateY(-22px) scale(1.12)}
+.paddle.lead img{filter:drop-shadow(0 0 14px rgba(227,199,137,.9)) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.paddle.lead .num{color:#F6DFA3}
+.paddle.lead small{color:#E3C789;font-weight:700}
+.paddle.me small{color:#F4EBDD}
+.paddle.raise{animation:raise .8s cubic-bezier(.3,1.4,.5,1)}
+@keyframes raise{0%{transform:translateY(40px) scale(1)}100%{transform:translateY(-22px) scale(1.12)}}
 .controls{background:#120C07;border-top:1px solid #5A4128;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
 .controls .grp{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .controls .lbl{font-size:13px;color:#BFAE95}
@@ -245,7 +247,7 @@ tbody tr:nth-child(even){background:var(--soft)}
 .controls .nb{display:flex;flex-direction:column;line-height:1.3}
 .controls .nb b{font-size:22px;color:#fff}
 .bid-paddle{display:flex;align-items:center;gap:12px;height:62px;padding:0 22px 0 10px;border-radius:14px;border:0;background:var(--gold);color:var(--on-gold);font:700 22px var(--fh);cursor:pointer}
-.bid-paddle .pn{background:#F4EBDD;color:#1A110A;border-radius:8px;min-width:50px;height:44px;display:flex;align-items:center;justify-content:center;font:700 22px var(--fb);box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.bid-paddle .pn{position:relative;width:30px;height:56px;background:url(paddle.png) center/contain no-repeat;display:flex;justify-content:center;font:700 11px var(--fh);color:#F6DFA3;padding-top:20px}
 .bid-paddle:disabled{opacity:.45;cursor:not-allowed}
 .bid-paddle:active:not(:disabled){transform:translateY(2px)}
 .st-line{font-weight:600;font-size:15px}
@@ -254,7 +256,9 @@ tbody tr:nth-child(even){background:var(--soft)}
   .hallstage{aspect-ratio:1/0.677}
   .hallstage>img{width:154.7%;max-width:none;height:auto;left:-28.35%;top:-5.6%;object-fit:fill}
   .scr{left:6%;right:6%;top:5.9%;bottom:5.9%}
-  .paddle .card{min-width:48px;height:42px;font-size:20px}
+  .paddle{width:52px}
+  .paddle .num{font-size:18px}
+  .audience{gap:10px;min-height:170px}
   .controls{flex-direction:column;align-items:stretch}
   .bid-paddle{justify-content:center}
 }

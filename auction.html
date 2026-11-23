@@ -68,6 +68,7 @@ import { watchAuction, watchLot, watchLots, watchBids, placeBid } from './db.js'
 import { AUCTION } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
+const ar = (n) => Number(n).toLocaleString('ar-SA', { useGrouping: false });
 let lot = null, bids = [], inc = AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null, lastLeader = null;
 
 $('incs').innerHTML = AUCTION.increments.map((v) => `<button class="inc" data-v="${v}">+${fmt(v)}</button>`).join('');
@@ -101,7 +102,7 @@ function ago(t) { if (!t) return 'الآن'; const s = Math.round((Date.now() - 
 // مضارب المزايدين: آخر من زايد، والأعلى مرفوع بالذهبي
 function paintPaddles() {
   const seen = new Set(), list = [];
-  for (const b of bids) { if (!seen.has(b.paddle)) { seen.add(b.paddle); list.push(b); } if (list.length >= 9) break; }
+  for (const b of bids) { if (!seen.has(b.paddle)) { seen.add(b.paddle); list.push(b); } if (list.length >= (innerWidth < 640 ? 5 : 9)) break; }
   const leader = lot?.leaderPaddle ?? null;
   if (leader != null && !seen.has(leader)) list.unshift({ paddle: leader });
   const me = currentUser?.paddle;
@@ -112,7 +113,7 @@ function paintPaddles() {
   const raise = leader !== lastLeader; lastLeader = leader;
   $('paddles').innerHTML = ordered.length ? ordered.map((b) => {
     const isL = b.paddle === leader, isMe = me != null && b.paddle === me;
-    return `<div class="paddle ${isL ? 'lead' : ''} ${isL && raise ? 'raise' : ''} ${isMe ? 'me' : ''}"><span class="card">${esc(b.paddle)}</span><span class="stick"></span><small>${isL ? 'الأعلى' : isMe ? 'أنت' : ''}</small></div>`;
+    return `<div class="paddle ${isL ? 'lead' : ''} ${isL && raise ? 'raise' : ''} ${isMe ? 'me' : ''}"><img src="paddle.png" alt=""><span class="num" aria-label="مضرب رقم ${esc(b.paddle)}">${ar(b.paddle)}</span><small>${isL ? 'الأعلى' : isMe ? 'أنت' : ''}</small></div>`;
   }).join('') : '<p style="color:#BFAE95;align-self:center;padding-bottom:14px">بانتظار أول مضرب…</p>';
 }
 
