@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body data-page="auction">
 <div class="wrap" style="padding-top:24px">
@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <div class="aud" aria-label="مضارب المزايدين"><div class="aud-in" id="paddles"></div></div>
+    <div class="aud" aria-label="مضارب الحاضرين"><div class="aud-in" id="paddles"></div><span class="aud-count" id="audCount"></span></div>
 
     <div class="controls">
       <div class="grp">
@@ -36,7 +36,7 @@
       <div class="nb"><span class="lbl">مزايدتك ستكون</span><b><span id="next">—</span> ريال</b></div>
       <div class="grp">
         <span class="st-line" id="status"></span>
-        <button class="bid-paddle" id="bidBtn"><span class="pn" id="myPaddle">؟</span>ارفع مضربي</button>
+        <button class="bid-paddle" id="bidBtn"><span class="pn" id="myPaddle">؟</span>زد</button>
       </div>
       <div class="msg err hidden" id="bidErr"></div>
     </div>
@@ -68,14 +68,15 @@
 </div>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, fmt, esc, toast } from './layout.js';
-import { watchAuction, watchLot, watchLots, watchBids, placeBid } from './db.js';
+import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence } from './db.js';
 import { AUCTION } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
 const SEATS = [
   { l: 41.16, t: 25.24, w: 8.74, f: 1 }, { l: 19.53, t: 32.20, w: 6.13, f: 1 }, { l: 70.53, t: 38.79, w: 5.67, f: 1 }, { l: 41.59, t: -10.34, w: 5.67 }, { l: 64.98, t: -12.22, w: 5.33 }, { l: 21.25, t: -11.54, w: 5.11 }, { l: 92.21, t: 3.64, w: 7.60, f: 1 }, { l: -0.50, t: 9.90, w: 6.58, f: 1 }, { l: 36.30, t: -2.38, w: 2.88 }, { l: 44.81, t: -10.23, w: 2.88 }
 ];
-const ar = (n) => Number(n).toLocaleString('ar-SA', { useGrouping: false });
+const ar = (n) => String(n);
+var present = [];
 let lot = null, bids = [], inc = AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null, lastLeader = null;
 
 $('incs').innerHTML = AUCTION.increments.map((v) => `<button class="inc" data-v="${v}">+${fmt(v)}</button>`).join('');
@@ -102,21 +103,25 @@ watchLots((ls) => {
   $('queue').innerHTML = q.length ? q.map((l) => `<div class="q"><div class="thumb">${l.image ? `<img src="${esc(l.image)}" alt="">` : ''}</div><div><div class="muted" style="font-size:12px">القطعة ${esc(l.no)}</div><b style="font-size:15px">${esc(l.name)}</b><div class="gold" style="font-size:13px">يبدأ من ${fmt(l.openPrice)}${l.openPrice != null ? ' ريال' : ''}</div></div></div>`).join('') : '<p class="muted">لا توجد قطع أخرى في هذا المزاد.</p>';
 });
 
-onCurrentUser(() => { paint(); paintPaddles(); });
+onCurrentUser((u) => { joinRoom(u); paint(); paintPaddles(); });
+watchPresence((ps) => { present = ps; paintPaddles(); });
 
 function ago(t) { if (!t) return 'الآن'; const s = Math.round((Date.now() - t) / 1000); return s < 10 ? 'الآن' : s < 60 ? `قبل ${s} ث` : s < 3600 ? `قبل ${Math.round(s / 60)} د` : `قبل ${Math.round(s / 3600)} س`; }
 
 // مقاعد الصورة: كل مضرب في يد شخص جالس (المقعد الأول في المنتصف لصاحب أعلى مزايدة)
 function paintPaddles() {
   const leader = lot?.leaderPaddle ?? null, me = currentUser?.paddle;
-  const seen = new Set(leader != null ? [leader] : []), list = leader != null ? [leader] : [];
-  for (const b of bids) { if (!seen.has(b.paddle)) { seen.add(b.paddle); list.push(b.paddle); } if (list.length >= SEATS.length) break; }
+  // كل حاضر له مقعد ثابت حسب وقت دخوله؛ وصاحب أعلى مزايدة يظهر حتى لو خرج
+  const people = present.slice().sort((x, y) => x.joinedAt - y.joinedAt).map((x) => x.paddle);
+  const seated = [...new Set(people)];
+  if (leader != null && !seated.includes(leader)) seated.push(leader);
+  $('audCount').textContent = `في القاعة: ${present.length}`;
   const raise = leader !== lastLeader; lastLeader = leader;
   $('paddles').innerHTML = SEATS.map((s, i) => {
-    const p = list[i], isL = p != null && p === leader, isMe = p != null && me != null && p === me;
+    const p = seated[i], isL = p != null && p === leader, isMe = p != null && me != null && p === me;
     const cls = ['seat', s.f ? 'front' : '', p == null ? 'empty' : '', isL ? 'lead' : '', isL && raise ? 'raise' : '', isMe ? 'me' : ''].join(' ');
     const tag = isL ? '<span class="tag">الأعلى</span>' : isMe ? '<span class="tag">أنت</span>' : '';
-    return `<div class="${cls}" style="left:${s.l}%;top:${s.t}%;width:${s.w}%">${tag}<img src="paddle.png" alt=""><span class="num">${p != null ? ar(p) : ''}</span></div>`;
+    return `<div class="${cls}" style="left:${s.l}%;top:${s.t}%;width:${s.w}%">${tag}<img src="paddle.png" alt=""><span class="num">${p != null ? esc(ar(p)) : ''}</span></div>`;
   }).join('');
 }
 
@@ -177,7 +182,7 @@ $('bidBtn').onclick = async () => {
   $('bidErr').classList.add('hidden');
   if (!currentUser) { openAuth('up'); return; }
   $('bidBtn').disabled = true;
-  try { const a = await placeBid(lot.id, inc, currentUser); toast('رفعت مضربك على ' + fmt(a) + ' ريال'); }
+  try { const a = await placeBid(lot.id, inc, currentUser); toast('زدت إلى ' + fmt(a) + ' ريال'); }
   catch (x) { $('bidErr').textContent = x.message?.includes('permission') ? 'تعذّرت المزايدة — حدّث الصفحة وحاول مرة أخرى' : x.message; $('bidErr').classList.remove('hidden'); }
   finally { paint(); }
 };

@@ -205,3 +205,31 @@ export async function admin() {
   if (DEMO) return null;
   return init();
 }
+
+/* ---------------- الحضور في القاعة ---------------- */
+// كل مستخدم مسجّل يفتح صفحة المزاد يُسجَّل حاضراً ويأخذ مقعداً بمضربه، ويُحدَّث كل 25 ثانية
+const demoPresence = [215, 88, 31, 105, 63].map((p, i) => ({ uid: 'd' + p, paddle: p, joinedAt: Date.now() - (10 - i) * 6e4, seenAt: Date.now() }));
+let beat = null;
+export async function joinRoom(user) {
+  clearInterval(beat);
+  if (!user || !user.paddle) return;
+  const joinedAt = Date.now();
+  if (DEMO) {
+    if (!demoPresence.find((x) => x.uid === user.uid)) { demoPresence.push({ uid: user.uid, paddle: user.paddle, joinedAt, seenAt: Date.now() }); setTimeout(demoEmit, 0); }
+    return;
+  }
+  const { db, F } = await init();
+  const ref = F.doc(db, 'presence', user.uid);
+  const ping = () => F.setDoc(ref, { uid: user.uid, paddle: user.paddle, joinedAt, seenAt: Date.now() }).catch(() => {});
+  ping(); beat = setInterval(ping, 25000);
+  addEventListener('pagehide', () => F.deleteDoc(ref).catch(() => {}), { once: true });
+}
+export async function watchPresence(cb) {
+  if (DEMO) { const f = () => cb(demoPresence.slice()); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+  const { db, F } = await init();
+  let list = [];
+  const emit = () => cb(list.filter((x) => Date.now() - x.seenAt < 70000));
+  const un = F.onSnapshot(F.collection(db, 'presence'), (s) => { list = s.docs.map((d) => d.data()); emit(); });
+  const t = setInterval(emit, 15000);
+  return () => { un(); clearInterval(t); };
+}
