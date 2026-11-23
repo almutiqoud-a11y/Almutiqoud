@@ -5,11 +5,11 @@
 <meta name="description" content="المعتق للعود: مزاد مباشر للعود، وبيع بالجملة للمحلات، وبالقطاعي للأفراد.">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="img/mark_gold.png">
+<link rel="icon" href="mark_gold.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body data-page="home">
 <main>
@@ -30,15 +30,15 @@
         <div class="cd" id="cd"><span id="cdD">00<small>يوم</small></span><span id="cdH">00<small>ساعة</small></span><span id="cdM">00<small>دقيقة</small></span><span id="cdS">00<small>ثانية</small></span></div>
       </div>
     </div>
-    <div class="hero-media"><img src="img/brand_square.jpg" alt="شعار المعتق للعود الرسمي" width="595" height="596"></div>
+    <div class="hero-media"><img src="brand_square.jpg" alt="شعار المعتق للعود الرسمي" width="595" height="596"></div>
   </div></section>
 
   <section class="section"><div class="wrap">
     <div class="section-title"><h2>من عالم المعتق</h2></div>
     <div class="gallery">
-      <figure class="wide"><img src="img/kiosk.jpg" alt="نقطة بيع المعتق للعود" loading="lazy"><figcaption>نقطة بيع المعتق</figcaption></figure>
-      <figure><img src="img/mabkhara.jpg" alt="مبخرة المعتق" loading="lazy"><figcaption>مبخرة المعتق</figcaption></figure>
-      <figure><img src="img/oudpile.jpg" alt="عود المعتق" loading="lazy"><figcaption>عود معتق أصيل</figcaption></figure>
+      <figure class="wide"><img src="kiosk.jpg" alt="نقطة بيع المعتق للعود" loading="lazy"><figcaption>نقطة بيع المعتق</figcaption></figure>
+      <figure><img src="mabkhara.jpg" alt="مبخرة المعتق" loading="lazy"><figcaption>مبخرة المعتق</figcaption></figure>
+      <figure><img src="oudpile.jpg" alt="عود المعتق" loading="lazy"><figcaption>عود معتق أصيل</figcaption></figure>
     </div>
   </div></section>
 
@@ -62,7 +62,7 @@
 
   <section class="section"><div class="wrap">
     <div class="steps">
-      <img src="img/bidders.jpg" alt="مزايدون يرفعون أرقامهم" loading="lazy">
+      <img src="bidders.jpg" alt="مزايدون يرفعون أرقامهم" loading="lazy">
       <div class="list">
         <h2 style="font-size:34px;color:var(--gold-dark)">كيف يعمل المزاد؟</h2>
         <div class="step"><span class="n">1</span><div><b>سجّل واحصل على رقم مزايدتك</b><div class="muted">حساب واحد ورقم دائم باسمك</div></div></div>
@@ -88,9 +88,9 @@
   </div></section>
 </main>
 <script type="module">
-import './js/layout.js';
-import { watchAuction, getProducts } from './js/db.js';
-import { fmt, esc, addToCart } from './js/layout.js';
+import './layout.js';
+import { watchAuction, getProducts } from './db.js';
+import { fmt, esc, addToCart } from './layout.js';
 
 let startAt = null;
 watchAuction((a) => {

@@ -23,10 +23,10 @@ const demoProducts = [
   { id: 'p2', cat: 'oil', name: 'دهن عود هندي', sub: 'دهن • الهند', unit: 'للتولة', price: null },
   { id: 'p3', cat: 'bakhoor', name: 'بخور معمول ملكي', sub: 'بخور • خلطة المعتق', unit: 'للعلبة', price: null },
   { id: 'p4', cat: 'oud', name: 'عود إندونيسي', sub: 'عود • إندونيسيا', unit: 'للتولة', price: null },
-  { id: 'p5', cat: 'mabkhara', name: 'مبخرة المعتق', sub: 'مباخر', unit: 'للقطعة', price: null, image: 'img/mabkhara.jpg' },
+  { id: 'p5', cat: 'mabkhara', name: 'مبخرة المعتق', sub: 'مباخر', unit: 'للقطعة', price: null, image: 'mabkhara.jpg' },
   { id: 'p6', cat: 'oil', name: 'دهن عود كمبودي', sub: 'دهن • كمبوديا', unit: 'للتولة', price: null },
   { id: 'p7', cat: 'bakhoor', name: 'بخور عود مروكي', sub: 'بخور', unit: 'للعلبة', price: null },
-  { id: 'p8', cat: 'oud', name: 'عود ماليزي', sub: 'عود • ماليزيا', unit: 'للجرام', price: null, image: 'img/oudpile.jpg' },
+  { id: 'p8', cat: 'oud', name: 'عود ماليزي', sub: 'عود • ماليزيا', unit: 'للجرام', price: null, image: 'oudpile.jpg' },
   { id: 'p9', cat: 'gift', name: 'صندوق هدية المعتق', sub: 'هدايا', unit: 'للصندوق', price: null }
 ];
 const demoWholesale = [

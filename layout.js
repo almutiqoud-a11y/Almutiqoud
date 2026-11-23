@@ -44,7 +44,7 @@ document.body.insertAdjacentHTML('afterbegin', `
 ${DEMO ? '<div class="topbar" style="background:#2A1C10;color:#fff">وضع العرض: البيانات تجريبية حتى تُضاف إعدادات Firebase</div>' : ''}
 <div class="topbar">مزاد مباشر • أسعار خاصة للتجار والمحلات • طلبات القطاعي لجميع مناطق المملكة</div>
 <header class="site-header"><div class="wrap">
-  <a class="brand" href="index.html"><img src="img/mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>رائحة تكتمل بها الفخامة</small></span></a>
+  <a class="brand" href="index.html"><img src="mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>رائحة تكتمل بها الفخامة</small></span></a>
   <nav class="main-nav" aria-label="القائمة الرئيسية">${nav.map(([h, k, l]) => `<a href="${h}" class="${page === k ? 'active' : ''}">${k === 'auction' ? '<span class="dot"></span>' : ''}${l}</a>`).join('')}</nav>
   <div class="header-actions">
     <button class="icon-btn" id="cartBtn" aria-label="السلة">${icons.bag}<span class="badge-count hidden" id="cartCount">0</span></button>
@@ -54,7 +54,7 @@ ${DEMO ? '<div class="topbar" style="background:#2A1C10;color:#fff">وضع ال�
 
 document.body.insertAdjacentHTML('beforeend', `
 <footer class="site-footer" style="border-top:1px solid var(--line);margin-top:64px"><div class="wrap">
-  <div class="col" style="flex:1 1 260px"><img src="img/logo_gold.png" alt="المعتق للعود"><span class="muted">رائحة تكتمل بها الفخامة.</span></div>
+  <div class="col" style="flex:1 1 260px"><img src="logo_gold.png" alt="المعتق للعود"><span class="muted">رائحة تكتمل بها الفخامة.</span></div>
   <div class="col"><b>تسوّق</b><a href="auction.html">المزاد المباشر</a><a href="wholesale.html">الجملة</a><a href="retail.html">القطاعي</a></div>
   <div class="col"><b>المساعدة</b><a href="terms.html">شروط المزاد</a><a href="terms.html#shipping">الشحن والاسترجاع</a></div>
   <div class="col"><b>تواصل</b><span>واتساب: ${esc(CONTACT.whatsapp)}</span><span>${esc(CONTACT.email)}</span><span>السجل التجاري: ${esc(CONTACT.cr)}</span></div>

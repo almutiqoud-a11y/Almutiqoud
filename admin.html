@@ -5,11 +5,11 @@
 <meta name="robots" content="noindex">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="img/mark_gold.png">
+<link rel="icon" href="mark_gold.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="style.css">
 <style>
 .adm-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
 .adm h3{font-size:22px;color:var(--gold-dark);margin:0 0 12px}
@@ -55,7 +55,7 @@
             <label class="field">الاسم<input name="name" required></label>
             <div class="row2"><label class="field">المنشأ<input name="origin"></label><label class="field">الوزن<input name="weight"></label></div>
             <label class="field">مدة التعتيق<input name="age"></label>
-            <label class="field">مسار الصورة<input name="image" placeholder="img/lot-1.jpg"></label>
+            <label class="field">مسار الصورة<input name="image" placeholder="lot-1.jpg"></label>
             <button class="btn btn-gold btn-sm">حفظ القطعة</button></form>
         </aside>
       </div>
@@ -69,7 +69,7 @@
         <div class="row2"><label class="field">التصنيف<select name="cat"><option value="oud">عود</option><option value="oil">دهن عود</option><option value="bakhoor">بخور</option><option value="mabkhara">مباخر</option><option value="gift">هدايا</option></select></label>
         <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للجرام</option><option>للعلبة</option><option>للقطعة</option><option>للصندوق</option></select></label></div>
         <div class="row2"><label class="field">السعر (ريال)<input name="price" type="number" min="0" step="0.01"></label><label class="field">شارة<input name="badge" placeholder="جديد"></label></div>
-        <label class="field">مسار الصورة<input name="image" placeholder="img/p1.jpg"></label>
+        <label class="field">مسار الصورة<input name="image" placeholder="p1.jpg"></label>
         <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" checked style="width:18px;height:18px;accent-color:var(--gold)">ظاهر في المتجر</label>
         <button class="btn btn-gold btn-sm">حفظ المنتج</button></form></aside></div></section>
 
@@ -87,12 +87,12 @@
   </div>
 </main>
 <script type="module">
-import { onCurrentUser, esc, fmt, toast } from './js/layout.js';
-import { admin, DEMO } from './js/db.js';
+import { onCurrentUser, esc, fmt, toast } from './layout.js';
+import { admin, DEMO } from './db.js';
 const $ = (id) => document.getElementById(id);
 let started = false;
 onCurrentUser(async (u) => {
-  if (DEMO) { $('gate').textContent = 'لوحة التحكم تعمل بعد إضافة إعدادات Firebase في js/firebase-config.js.'; return; }
+  if (DEMO) { $('gate').textContent = 'لوحة التحكم تعمل بعد إضافة إعدادات Firebase في firebase-config.js.'; return; }
   if (!u) { $('gate').textContent = 'سجّل الدخول بحساب المدير.'; return; }
   if (!u.isAdmin) { $('gate').textContent = 'هذا الحساب ليس حساب مدير.'; return; }
   $('gate').classList.add('hidden'); $('app').classList.remove('hidden');

@@ -4,11 +4,11 @@
 <title>الجملة — المعتق للعود</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="img/mark_gold.png">
+<link rel="icon" href="mark_gold.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body data-page="wholesale">
 <section style="background:var(--soft);border-bottom:1px solid var(--line)"><div class="wrap" style="display:flex;flex-wrap:wrap;gap:32px;align-items:center;justify-content:space-between;padding-top:48px;padding-bottom:48px">
@@ -53,8 +53,8 @@
   </div>
 </div>
 <script type="module">
-import { currentUser, esc, fmt } from './js/layout.js';
-import { getWholesale, submitQuote } from './js/db.js';
+import { currentUser, esc, fmt } from './layout.js';
+import { getWholesale, submitQuote } from './db.js';
 const rows = await getWholesale();
 const cell = (v) => (v == null ? '[السعر]' : fmt(v));
 document.getElementById('rows').innerHTML = rows.map((r) => `<tr><th scope="row">${esc(r.name)}<div class="muted" style="font-size:13px;font-weight:400">${esc(r.origin)}</div></th><td class="muted">${esc(r.moq)}</td><td>${cell(r.p1)}</td><td>${cell(r.p2)}</td><td class="gold" style="font-weight:600">${cell(r.p3)}</td></tr>`).join('');

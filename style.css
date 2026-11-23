@@ -95,7 +95,7 @@ h1,h2,h3{font-family:var(--fh);line-height:1.25;margin:0}
 
 /* product */
 .product{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
-.product .img{height:210px;background:var(--raised) url(../img/mark_gold.png) center/56px auto no-repeat;position:relative}
+.product .img{height:210px;background:var(--raised) url(mark_gold.png) center/56px auto no-repeat;position:relative}
 .product .img img{width:100%;height:100%;object-fit:cover}
 .product .tag{position:absolute;top:12px;right:12px;background:#fff;border:1px solid var(--line2);color:var(--gold-dark);border-radius:999px;padding:2px 12px;font-size:13px;font-weight:600}
 .product .body{padding:18px;display:flex;flex-direction:column;gap:6px;flex:1}
@@ -162,7 +162,7 @@ tbody tr:nth-child(even){background:var(--soft)}
 .log-row .p{min-width:40px;height:32px;padding:0 6px;background:var(--cream);border-radius:6px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-inline-end:10px}
 .queue{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
 .queue .q{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center}
-.queue .thumb{width:60px;height:60px;flex:none;border-radius:10px;background:var(--raised) url(../img/mark_gold.png) center/34px auto no-repeat;overflow:hidden}
+.queue .thumb{width:60px;height:60px;flex:none;border-radius:10px;background:var(--raised) url(mark_gold.png) center/34px auto no-repeat;overflow:hidden}
 .queue .thumb img{width:100%;height:100%;object-fit:cover}
 
 /* chips / filters */

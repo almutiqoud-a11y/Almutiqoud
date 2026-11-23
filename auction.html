@@ -4,17 +4,17 @@
 <title>قاعة المزاد المباشر — المعتق للعود</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="img/mark_gold.png">
+<link rel="icon" href="mark_gold.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body data-page="auction">
 <div class="wrap" style="padding-top:28px">
   <div class="layout">
     <main>
-      <div class="stage" id="stage" style="background-image:url(img/hall.jpg)">
+      <div class="stage" id="stage" style="background-image:url(hall.jpg)">
         <div class="live-badges"><span class="live-badge" id="liveBadge">مباشر</span><span class="dark-badge" id="lotOf">—</span></div>
         <div class="cap"><span style="color:#E3C789;font-size:14px" id="lotOrigin"></span><b id="lotName">—</b></div>
       </div>
@@ -59,9 +59,9 @@
   </div>
 </div>
 <script type="module">
-import { currentUser, onCurrentUser, openAuth, fmt, esc, toast } from './js/layout.js';
-import { watchAuction, watchLot, watchLots, watchBids, placeBid } from './js/db.js';
-import { AUCTION } from './js/firebase-config.js';
+import { currentUser, onCurrentUser, openAuth, fmt, esc, toast } from './layout.js';
+import { watchAuction, watchLot, watchLots, watchBids, placeBid } from './db.js';
+import { AUCTION } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
 let lot = null, inc = AUCTION.increments[1] ?? AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null;
