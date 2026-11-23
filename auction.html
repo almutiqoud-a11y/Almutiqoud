@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <div class="audience" id="paddles" aria-label="مضارب المزايدين"></div>
+    <div class="aud" aria-label="مضارب المزايدين"><div class="aud-in" id="paddles"></div></div>
 
     <div class="controls">
       <div class="grp">
@@ -68,6 +68,9 @@ import { watchAuction, watchLot, watchLots, watchBids, placeBid } from './db.js'
 import { AUCTION } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
+const SEATS = [
+  { l: 41.16, t: 25.24, w: 8.74, f: 1 }, { l: 19.53, t: 32.20, w: 6.13, f: 1 }, { l: 70.53, t: 38.79, w: 5.67, f: 1 }, { l: 41.59, t: -10.34, w: 5.67 }, { l: 64.98, t: -12.22, w: 5.33 }, { l: 21.25, t: -11.54, w: 5.11 }, { l: 92.21, t: 3.64, w: 7.60, f: 1 }, { l: -0.50, t: 9.90, w: 6.58, f: 1 }, { l: 36.30, t: -2.38, w: 2.88 }, { l: 44.81, t: -10.23, w: 2.88 }
+];
 const ar = (n) => Number(n).toLocaleString('ar-SA', { useGrouping: false });
 let lot = null, bids = [], inc = AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null, lastLeader = null;
 
@@ -99,22 +102,18 @@ onCurrentUser(() => { paint(); paintPaddles(); });
 
 function ago(t) { if (!t) return 'الآن'; const s = Math.round((Date.now() - t) / 1000); return s < 10 ? 'الآن' : s < 60 ? `قبل ${s} ث` : s < 3600 ? `قبل ${Math.round(s / 60)} د` : `قبل ${Math.round(s / 3600)} س`; }
 
-// مضارب المزايدين: آخر من زايد، والأعلى مرفوع بالذهبي
+// مقاعد الصورة: كل مضرب في يد شخص جالس (المقعد الأول في المنتصف لصاحب أعلى مزايدة)
 function paintPaddles() {
-  const seen = new Set(), list = [];
-  for (const b of bids) { if (!seen.has(b.paddle)) { seen.add(b.paddle); list.push(b); } if (list.length >= (innerWidth < 640 ? 5 : 9)) break; }
-  const leader = lot?.leaderPaddle ?? null;
-  if (leader != null && !seen.has(leader)) list.unshift({ paddle: leader });
-  const me = currentUser?.paddle;
-  // الأعلى في المنتصف
-  const others = list.filter((b) => b.paddle !== leader);
-  const half = Math.ceil(others.length / 2);
-  const ordered = [...others.slice(0, half).reverse(), ...(leader != null ? [{ paddle: leader }] : []), ...others.slice(half)];
+  const leader = lot?.leaderPaddle ?? null, me = currentUser?.paddle;
+  const seen = new Set(leader != null ? [leader] : []), list = leader != null ? [leader] : [];
+  for (const b of bids) { if (!seen.has(b.paddle)) { seen.add(b.paddle); list.push(b.paddle); } if (list.length >= SEATS.length) break; }
   const raise = leader !== lastLeader; lastLeader = leader;
-  $('paddles').innerHTML = ordered.length ? ordered.map((b) => {
-    const isL = b.paddle === leader, isMe = me != null && b.paddle === me;
-    return `<div class="paddle ${isL ? 'lead' : ''} ${isL && raise ? 'raise' : ''} ${isMe ? 'me' : ''}"><img src="paddle.png" alt=""><span class="num" aria-label="مضرب رقم ${esc(b.paddle)}">${ar(b.paddle)}</span><small>${isL ? 'الأعلى' : isMe ? 'أنت' : ''}</small></div>`;
-  }).join('') : '<p style="color:#BFAE95;align-self:center;padding-bottom:14px">بانتظار أول مضرب…</p>';
+  $('paddles').innerHTML = SEATS.map((s, i) => {
+    const p = list[i], isL = p != null && p === leader, isMe = p != null && me != null && p === me;
+    const cls = ['seat', s.f ? 'front' : '', p == null ? 'empty' : '', isL ? 'lead' : '', isL && raise ? 'raise' : '', isMe ? 'me' : ''].join(' ');
+    const tag = isL ? '<span class="tag">الأعلى</span>' : isMe ? '<span class="tag">أنت</span>' : '';
+    return `<div class="${cls}" style="left:${s.l}%;top:${s.t}%;width:${s.w}%">${tag}<img src="paddle.png" alt=""><span class="num">${p != null ? ar(p) : ''}</span></div>`;
+  }).join('');
 }
 
 function paint() {
