@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 <style>
 .adm-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
 .adm h3{font-size:22px;color:var(--gold-dark);margin:0 0 12px}
@@ -55,7 +55,9 @@
             <label class="field">الاسم<input name="name" required></label>
             <div class="row2"><label class="field">المنشأ<input name="origin"></label><label class="field">الوزن<input name="weight"></label></div>
             <label class="field">مدة التعتيق<input name="age"></label>
-            <label class="field">مسار الصورة<input name="image" placeholder="lot-1.jpg"></label>
+            <div class="field">صورة القطعة<input type="file" accept="image/*" class="imgpick" style="height:auto;padding:10px"><input type="hidden" name="image"><img class="prev hidden" alt="معاينة الصورة" style="max-height:140px;width:auto;border-radius:10px;margin-top:6px"><button type="button" class="btn btn-line btn-sm imgclear hidden" style="align-self:flex-start;margin-top:6px">إزالة الصورة</button></div>
+            <label class="field">فيديو القطعة (رابط يوتيوب أو شورتس أو ملف mp4)<input name="video" type="url" inputmode="url" placeholder="https://youtube.com/shorts/…"></label>
+            <p class="muted" style="margin:0;font-size:13px">ارفع الفيديو على يوتيوب (يمكن «غير مدرج») والصق رابطه هنا.</p>
             <button class="btn btn-gold btn-sm">حفظ القطعة</button></form>
         </aside>
       </div>
@@ -69,7 +71,7 @@
         <div class="row2"><label class="field">التصنيف<select name="cat"><option value="oud">عود</option><option value="oil">دهن عود</option><option value="bakhoor">بخور</option><option value="mabkhara">مباخر</option><option value="gift">هدايا</option></select></label>
         <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للجرام</option><option>للعلبة</option><option>للقطعة</option><option>للصندوق</option></select></label></div>
         <div class="row2"><label class="field">السعر (ريال)<input name="price" type="number" min="0" step="0.01"></label><label class="field">شارة<input name="badge" placeholder="جديد"></label></div>
-        <label class="field">مسار الصورة<input name="image" placeholder="p1.jpg"></label>
+        <div class="field">صورة المنتج<input type="file" accept="image/*" class="imgpick" style="height:auto;padding:10px"><input type="hidden" name="image"><img class="prev hidden" alt="معاينة الصورة" style="max-height:140px;width:auto;border-radius:10px;margin-top:6px"><button type="button" class="btn btn-line btn-sm imgclear hidden" style="align-self:flex-start;margin-top:6px">إزالة الصورة</button></div>
         <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" checked style="width:18px;height:18px;accent-color:var(--gold)">ظاهر في المتجر</label>
         <button class="btn btn-gold btn-sm">حفظ المنتج</button></form></aside></div></section>
 
@@ -107,7 +109,23 @@ document.querySelector('.adm-tabs').onclick = (e) => {
 const ms = (t) => (t && t.toMillis ? t.toMillis() : t);
 const dt = (t) => (t ? new Date(ms(t)).toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' }) : '—');
 const num = (v) => (v === '' || v == null ? null : +v);
-const fill = (f, d) => Object.entries(d).forEach(([k, v]) => { if (f[k]) f[k].type === 'checkbox' ? (f[k].checked = !!v) : (f[k].value = v ?? ''); });
+const fill = (f, d) => { f.reset(); Object.entries(d).forEach(([k, v]) => { if (f[k] && f[k].type !== 'file') f[k].type === 'checkbox' ? (f[k].checked = !!v) : (f[k].value = v ?? ''); }); if (f.image) showPrev(f); };
+// تصغير الصورة وحفظها داخل قاعدة البيانات (بدون الحاجة إلى Storage)
+function shrink(file, max = 900, q = 0.75) {
+  return new Promise((res, rej) => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => { const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); let d = c.toDataURL('image/jpeg', q); if (d.length > 700000) d = c.toDataURL('image/jpeg', 0.55); res(d); };
+    img.onerror = () => rej(new Error('تعذّر قراءة الصورة')); img.src = url;
+  });
+}
+function showPrev(f) { const v = f.image.value, p = f.querySelector('.prev'), c = f.querySelector('.imgclear'); p.src = v || ''; p.classList.toggle('hidden', !v); c.classList.toggle('hidden', !v); }
+document.addEventListener('change', async (e) => {
+  const i = e.target.closest('.imgpick'); if (!i || !i.files[0]) return; const f = i.form;
+  try { f.image.value = await shrink(i.files[0]); showPrev(f); } catch (x) { toast(x.message); } i.value = '';
+});
+document.addEventListener('click', (e) => { const b = e.target.closest('.imgclear'); if (b) { b.form.image.value = ''; showPrev(b.form); } });
 const STATUS = { queued: 'بالانتظار', live: 'مباشر', sold: 'بيعت', unsold: 'لم تُبع' };
 
 function start({ db, F }) {
@@ -133,14 +151,17 @@ function start({ db, F }) {
   F.onSnapshot(F.query(col('lots'), F.orderBy('no')), (q) => {
     lots = q.docs.map((d) => ({ id: d.id, ...d.data() }));
     $('lotRows').innerHTML = lots.map((l) => `<tr><td>${l.no}</td><td>${esc(l.name)}</td><td>${fmt(l.openPrice)}</td><td>${fmt(l.currentPrice)}</td><td>${l.leaderPaddle ?? '—'}</td><td><span class="st">${STATUS[l.status] || l.status}</span></td>
-      <td style="white-space:nowrap"><button class="btn btn-line" data-a="edit" data-id="${l.id}">تعديل</button> ${l.status === 'queued' ? `<button class="btn btn-gold" data-a="go" data-id="${l.id}">اعرضها الآن</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">أضف أول قطعة من النموذج.</td></tr>';
+      <td style="white-space:nowrap"><button class="btn btn-line" data-a="edit" data-id="${l.id}">تعديل</button> ${l.status !== 'live' ? `<button class="btn btn-gold" data-a="go" data-id="${l.id}">${l.status === 'queued' ? 'اعرضها الآن' : 'أعد عرضها'}</button>` : ''} ${l.status !== 'live' ? `<button class="btn btn-line" data-a="del" data-id="${l.id}">حذف</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">أضف أول قطعة من النموذج.</td></tr>';
     drawLive();
   });
   $('lotRows').onclick = async (e) => {
     const b = e.target.closest('button'); if (!b) return; const l = lots.find((x) => x.id === b.dataset.id);
     if (b.dataset.a === 'edit') { fill($('lotForm'), l); $('lotForm').scrollIntoView({ behavior: 'smooth' }); }
+    if (b.dataset.a === 'del') { if (b.dataset.confirm) await F.deleteDoc(F.doc(db, 'lots', l.id)); else { b.dataset.confirm = '1'; b.textContent = 'تأكيد الحذف'; } return; }
     if (b.dataset.a === 'go') {
       const min = +auction.lotMinutes || 5;
+      const prev = lots.find((x) => x.status === 'live' && x.id !== l.id);
+      if (prev) await F.updateDoc(F.doc(db, 'lots', prev.id), { status: prev.leaderUid ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
       await F.updateDoc(F.doc(db, 'lots', l.id), { status: 'live', currentPrice: l.openPrice, leaderUid: null, leaderPaddle: null, bidCount: 0, endsAt: F.Timestamp.fromMillis(Date.now() + min * 6e4) });
       await F.setDoc(auRef, { currentLotId: l.id, status: 'live', lotTotal: lots.length }, { merge: true });
       toast('القطعة معروضة الآن');
@@ -161,7 +182,7 @@ function start({ db, F }) {
     e.preventDefault(); const f = e.target; const d = Object.fromEntries(new FormData(f)); const id = d.id; delete d.id;
     const data = { ...d, no: +d.no, openPrice: num(d.openPrice) };
     if (id) await F.updateDoc(F.doc(db, 'lots', id), data); else await F.addDoc(col('lots'), { ...data, status: 'queued', currentPrice: null, bidCount: 0, endsAt: null, leaderUid: null, leaderPaddle: null });
-    f.reset(); toast('حُفظت القطعة');
+    f.reset(); showPrev(f); toast('حُفظت القطعة');
   };
 
   let prods = [];
@@ -179,7 +200,7 @@ function start({ db, F }) {
     e.preventDefault(); const f = e.target; const d = Object.fromEntries(new FormData(f)); const id = d.id; delete d.id;
     const data = { ...d, price: num(d.price), active: f.active.checked };
     id ? await F.updateDoc(F.doc(db, 'products', id), data) : await F.addDoc(col('products'), data);
-    f.reset(); f.active.checked = true; toast('حُفظ المنتج');
+    f.reset(); f.active.checked = true; showPrev(f); toast('حُفظ المنتج');
   };
 
   let ws = [];
