@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>لوحة التحكم — المعتق للعود</title>
+<meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="img/mark_gold.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.adm-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
+.adm h3{font-size:22px;color:var(--gold-dark);margin:0 0 12px}
+.adm table{min-width:720px;font-size:15px}
+.adm td .btn{height:36px;padding:0 12px;font-size:14px}
+.st{border-radius:999px;padding:2px 10px;font-size:13px;background:var(--raised)}
+</style>
+</head>
+<body data-page="admin">
+<main class="wrap adm" style="padding-top:28px">
+  <h1 style="font-size:36px">لوحة التحكم</h1>
+  <div id="gate" class="msg err" style="margin-top:16px">جارٍ التحقق…</div>
+  <div id="app" class="hidden">
+    <div class="adm-tabs" role="tablist">
+      <button class="chip" data-t="auction" aria-pressed="true">المزاد</button>
+      <button class="chip" data-t="products">منتجات القطاعي</button>
+      <button class="chip" data-t="wholesale">أسعار الجملة</button>
+      <button class="chip" data-t="quotes">طلبات الجملة</button>
+      <button class="chip" data-t="orders">طلبات القطاعي</button>
+    </div>
+
+    <section data-p="auction">
+      <div class="layout">
+        <main>
+          <div class="panel" style="margin-bottom:20px">
+            <h3>القطعة المعروضة الآن</h3>
+            <div id="liveBox" class="muted">لا توجد قطعة مباشرة.</div>
+          </div>
+          <div class="panel"><h3>قطع المزاد</h3><div class="table-box"><table>
+            <thead><tr><th>#</th><th>القطعة</th><th>سعر الافتتاح</th><th>الحالي</th><th>الفائز</th><th>الحالة</th><th></th></tr></thead>
+            <tbody id="lotRows"></tbody></table></div></div>
+        </main>
+        <aside style="display:flex;flex-direction:column;gap:20px">
+          <form class="panel form" id="aucForm"><h3>بيانات المزاد</h3>
+            <label class="field">اسم المزاد<input name="title" required></label>
+            <label class="field">موعد البدء<input name="startAt" type="datetime-local" required></label>
+            <label class="field">مدة كل قطعة (دقائق)<input name="lotMinutes" type="number" min="1" value="5"></label>
+            <label class="field">الحالة<select name="status"><option value="upcoming">قادم</option><option value="live">مباشر</option><option value="ended">انتهى</option></select></label>
+            <button class="btn btn-gold btn-sm">حفظ</button></form>
+          <form class="panel form" id="lotForm"><h3>إضافة / تعديل قطعة</h3>
+            <input type="hidden" name="id">
+            <div class="row2"><label class="field">رقم القطعة<input name="no" type="number" min="1" required></label><label class="field">سعر الافتتاح<input name="openPrice" type="number" min="0" required></label></div>
+            <label class="field">الاسم<input name="name" required></label>
+            <div class="row2"><label class="field">المنشأ<input name="origin"></label><label class="field">الوزن<input name="weight"></label></div>
+            <label class="field">مدة التعتيق<input name="age"></label>
+            <label class="field">مسار الصورة<input name="image" placeholder="img/lot-1.jpg"></label>
+            <button class="btn btn-gold btn-sm">حفظ القطعة</button></form>
+        </aside>
+      </div>
+    </section>
+
+    <section data-p="products" class="hidden"><div class="layout">
+      <main class="panel"><h3>المنتجات</h3><div class="table-box"><table><thead><tr><th>المنتج</th><th>التصنيف</th><th>السعر</th><th>الوحدة</th><th>ظاهر</th><th></th></tr></thead><tbody id="prodRows"></tbody></table></div></main>
+      <aside><form class="panel form" id="prodForm"><h3>إضافة / تعديل منتج</h3><input type="hidden" name="id">
+        <label class="field">الاسم<input name="name" required></label>
+        <label class="field">وصف مختصر<input name="sub" placeholder="عود • كمبوديا"></label>
+        <div class="row2"><label class="field">التصنيف<select name="cat"><option value="oud">عود</option><option value="oil">دهن عود</option><option value="bakhoor">بخور</option><option value="mabkhara">مباخر</option><option value="gift">هدايا</option></select></label>
+        <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للجرام</option><option>للعلبة</option><option>للقطعة</option><option>للصندوق</option></select></label></div>
+        <div class="row2"><label class="field">السعر (ريال)<input name="price" type="number" min="0" step="0.01"></label><label class="field">شارة<input name="badge" placeholder="جديد"></label></div>
+        <label class="field">مسار الصورة<input name="image" placeholder="img/p1.jpg"></label>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="active" checked style="width:18px;height:18px;accent-color:var(--gold)">ظاهر في المتجر</label>
+        <button class="btn btn-gold btn-sm">حفظ المنتج</button></form></aside></div></section>
+
+    <section data-p="wholesale" class="hidden"><div class="layout">
+      <main class="panel"><h3>أسعار الجملة</h3><div class="table-box"><table><thead><tr><th>الترتيب</th><th>المنتج</th><th>أقل كمية</th><th>1–5</th><th>5–20</th><th>+20</th><th></th></tr></thead><tbody id="wRows"></tbody></table></div></main>
+      <aside><form class="panel form" id="wForm"><h3>إضافة / تعديل</h3><input type="hidden" name="id">
+        <div class="row2"><label class="field">الترتيب<input name="order" type="number" value="1"></label><label class="field">أقل كمية<input name="moq" placeholder="1 كجم"></label></div>
+        <label class="field">المنتج<input name="name" required></label><label class="field">الدرجة / المنشأ<input name="origin"></label>
+        <div class="row2"><label class="field">1–5 كجم<input name="p1" type="number"></label><label class="field">5–20 كجم<input name="p2" type="number"></label></div>
+        <label class="field">أكثر من 20 كجم<input name="p3" type="number"></label>
+        <button class="btn btn-gold btn-sm">حفظ</button></form></aside></div></section>
+
+    <section data-p="quotes" class="hidden"><div class="panel"><h3>طلبات عروض الجملة</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنشأة</th><th>الجوال</th><th>المنتج</th><th>الكمية</th><th>ملاحظات</th><th>الحالة</th></tr></thead><tbody id="qRows"></tbody></table></div></div></section>
+    <section data-p="orders" class="hidden"><div class="panel"><h3>طلبات القطاعي</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>العميل</th><th>الجوال</th><th>العنوان</th><th>المنتجات</th><th>الحالة</th></tr></thead><tbody id="oRows"></tbody></table></div></div></section>
+  </div>
+</main>
+<script type="module">
+import { onCurrentUser, esc, fmt, toast } from './js/layout.js';
+import { admin, DEMO } from './js/db.js';
+const $ = (id) => document.getElementById(id);
+let started = false;
+onCurrentUser(async (u) => {
+  if (DEMO) { $('gate').textContent = 'لوحة التحكم تعمل بعد إضافة إعدادات Firebase في js/firebase-config.js.'; return; }
+  if (!u) { $('gate').textContent = 'سجّل الدخول بحساب المدير.'; return; }
+  if (!u.isAdmin) { $('gate').textContent = 'هذا الحساب ليس حساب مدير.'; return; }
+  $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
+  if (!started) { started = true; start(await admin()); }
+});
+
+document.querySelector('.adm-tabs').onclick = (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  document.querySelectorAll('.adm-tabs .chip').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  document.querySelectorAll('section[data-p]').forEach((s) => s.classList.toggle('hidden', s.dataset.p !== b.dataset.t));
+};
+const ms = (t) => (t && t.toMillis ? t.toMillis() : t);
+const dt = (t) => (t ? new Date(ms(t)).toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+const num = (v) => (v === '' || v == null ? null : +v);
+const fill = (f, d) => Object.entries(d).forEach(([k, v]) => { if (f[k]) f[k].type === 'checkbox' ? (f[k].checked = !!v) : (f[k].value = v ?? ''); });
+const STATUS = { queued: 'بالانتظار', live: 'مباشر', sold: 'بيعت', unsold: 'لم تُبع' };
+
+function start({ db, F }) {
+  const col = (n) => F.collection(db, n);
+  const auRef = F.doc(db, 'auctions', 'current');
+  let lots = [], auction = {};
+
+  F.onSnapshot(auRef, (s) => {
+    auction = s.exists() ? s.data() : {};
+    const f = $('aucForm');
+    if (auction.title) f.title.value = auction.title;
+    if (auction.startAt) { const d = new Date(ms(auction.startAt)); f.startAt.value = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); }
+    if (auction.status) f.status.value = auction.status;
+    if (auction.lotMinutes) f.lotMinutes.value = auction.lotMinutes;
+    drawLive();
+  });
+  $('aucForm').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target;
+    await F.setDoc(auRef, { title: f.title.value, startAt: F.Timestamp.fromDate(new Date(f.startAt.value)), status: f.status.value, lotMinutes: +f.lotMinutes.value || 5, lotTotal: lots.length }, { merge: true });
+    toast('حُفظ المزاد');
+  };
+
+  F.onSnapshot(F.query(col('lots'), F.orderBy('no')), (q) => {
+    lots = q.docs.map((d) => ({ id: d.id, ...d.data() }));
+    $('lotRows').innerHTML = lots.map((l) => `<tr><td>${l.no}</td><td>${esc(l.name)}</td><td>${fmt(l.openPrice)}</td><td>${fmt(l.currentPrice)}</td><td>${l.leaderPaddle ?? '—'}</td><td><span class="st">${STATUS[l.status] || l.status}</span></td>
+      <td style="white-space:nowrap"><button class="btn btn-line" data-a="edit" data-id="${l.id}">تعديل</button> ${l.status === 'queued' ? `<button class="btn btn-gold" data-a="go" data-id="${l.id}">اعرضها الآن</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">أضف أول قطعة من النموذج.</td></tr>';
+    drawLive();
+  });
+  $('lotRows').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return; const l = lots.find((x) => x.id === b.dataset.id);
+    if (b.dataset.a === 'edit') { fill($('lotForm'), l); $('lotForm').scrollIntoView({ behavior: 'smooth' }); }
+    if (b.dataset.a === 'go') {
+      const min = +auction.lotMinutes || 5;
+      await F.updateDoc(F.doc(db, 'lots', l.id), { status: 'live', currentPrice: l.openPrice, leaderUid: null, leaderPaddle: null, bidCount: 0, endsAt: F.Timestamp.fromMillis(Date.now() + min * 6e4) });
+      await F.setDoc(auRef, { currentLotId: l.id, status: 'live', lotTotal: lots.length }, { merge: true });
+      toast('القطعة معروضة الآن');
+    }
+  };
+  function drawLive() {
+    const l = lots.find((x) => x.id === auction.currentLotId && x.status === 'live');
+    const box = $('liveBox');
+    if (!l) { box.innerHTML = '<span class="muted">لا توجد قطعة مباشرة. اختر «اعرضها الآن» من الجدول.</span>'; return; }
+    box.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+      <div><b style="font-size:20px">${esc(l.name)}</b><div class="muted">السعر الحالي ${fmt(l.currentPrice)} ريال • الرقم ${l.leaderPaddle ?? '—'} • ينتهي ${dt(l.endsAt)}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-line btn-sm" id="ext">+2 دقيقة</button><button class="btn btn-gold btn-sm" id="sold">إنهاء وترسية</button><button class="btn btn-line btn-sm" id="unsold">إنهاء بدون بيع</button></div></div>`;
+    $('ext').onclick = () => F.updateDoc(F.doc(db, 'lots', l.id), { endsAt: F.Timestamp.fromMillis(Math.max(Date.now(), ms(l.endsAt)) + 12e4) });
+    $('sold').onclick = () => F.updateDoc(F.doc(db, 'lots', l.id), { status: l.leaderUid ? 'sold' : 'unsold', endsAt: F.Timestamp.now() }).then(() => toast(l.leaderUid ? 'رُسّيت على الرقم ' + l.leaderPaddle : 'لا توجد مزايدات'));
+    $('unsold').onclick = () => F.updateDoc(F.doc(db, 'lots', l.id), { status: 'unsold', endsAt: F.Timestamp.now() });
+  }
+  $('lotForm').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const d = Object.fromEntries(new FormData(f)); const id = d.id; delete d.id;
+    const data = { ...d, no: +d.no, openPrice: num(d.openPrice) };
+    if (id) await F.updateDoc(F.doc(db, 'lots', id), data); else await F.addDoc(col('lots'), { ...data, status: 'queued', currentPrice: null, bidCount: 0, endsAt: null, leaderUid: null, leaderPaddle: null });
+    f.reset(); toast('حُفظت القطعة');
+  };
+
+  let prods = [];
+  F.onSnapshot(col('products'), (q) => {
+    prods = q.docs.map((d) => ({ id: d.id, ...d.data() }));
+    $('prodRows').innerHTML = prods.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(p.cat)}</td><td>${fmt(p.price)}</td><td>${esc(p.unit)}</td><td>${p.active ? 'نعم' : 'لا'}</td><td><button class="btn btn-line" data-id="${p.id}">تعديل</button> <button class="btn btn-line" data-del="${p.id}">حذف</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">لا توجد منتجات بعد.</td></tr>';
+  });
+  $('prodRows').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.id) fill($('prodForm'), prods.find((p) => p.id === b.dataset.id));
+    if (b.dataset.del && b.dataset.confirm) await F.deleteDoc(F.doc(db, 'products', b.dataset.del));
+    else if (b.dataset.del) { b.dataset.confirm = '1'; b.textContent = 'تأكيد الحذف'; }
+  };
+  $('prodForm').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const d = Object.fromEntries(new FormData(f)); const id = d.id; delete d.id;
+    const data = { ...d, price: num(d.price), active: f.active.checked };
+    id ? await F.updateDoc(F.doc(db, 'products', id), data) : await F.addDoc(col('products'), data);
+    f.reset(); f.active.checked = true; toast('حُفظ المنتج');
+  };
+
+  let ws = [];
+  F.onSnapshot(F.query(col('wholesale'), F.orderBy('order')), (q) => {
+    ws = q.docs.map((d) => ({ id: d.id, ...d.data() }));
+    $('wRows').innerHTML = ws.map((w) => `<tr><td>${w.order}</td><td>${esc(w.name)}</td><td>${esc(w.moq)}</td><td>${fmt(w.p1)}</td><td>${fmt(w.p2)}</td><td>${fmt(w.p3)}</td><td><button class="btn btn-line" data-id="${w.id}">تعديل</button></td></tr>`).join('') || '<tr><td colspan="7" class="muted">لا توجد أسعار بعد.</td></tr>';
+  });
+  $('wRows').onclick = (e) => { const b = e.target.closest('button'); if (b) fill($('wForm'), ws.find((w) => w.id === b.dataset.id)); };
+  $('wForm').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const d = Object.fromEntries(new FormData(f)); const id = d.id; delete d.id;
+    const data = { ...d, order: +d.order || 0, p1: num(d.p1), p2: num(d.p2), p3: num(d.p3) };
+    id ? await F.updateDoc(F.doc(db, 'wholesale', id), data) : await F.addDoc(col('wholesale'), data);
+    f.reset(); toast('حُفظ');
+  };
+
+  const statusSel = (coll, id, v) => `<select data-c="${coll}" data-id="${id}" style="height:36px;border-radius:8px;border:1px solid var(--line2)">${[['new', 'جديد'], ['contacted', 'تم التواصل'], ['done', 'مكتمل'], ['cancelled', 'ملغي']].map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  F.onSnapshot(F.query(col('quotes'), F.orderBy('createdAt', 'desc'), F.limit(200)), (q) => {
+    $('qRows').innerHTML = q.docs.map((d) => { const x = d.data(); return `<tr><td>${dt(x.createdAt)}</td><td>${esc(x.company)}<div class="muted" style="font-size:12px">${esc(x.cr)}</div></td><td><a href="https://wa.me/966${esc(String(x.phone).slice(1))}">${esc(x.phone)}</a></td><td>${esc(x.product)}</td><td>${esc(x.qty)}</td><td>${esc(x.notes)}</td><td>${statusSel('quotes', d.id, x.status)}</td></tr>`; }).join('') || '<tr><td colspan="7" class="muted">لا توجد طلبات.</td></tr>';
+  });
+  F.onSnapshot(F.query(col('orders'), F.orderBy('createdAt', 'desc'), F.limit(200)), (q) => {
+    $('oRows').innerHTML = q.docs.map((d) => { const x = d.data(); return `<tr><td>${dt(x.createdAt)}</td><td>${esc(x.name)}</td><td><a href="https://wa.me/966${esc(String(x.phone).slice(1))}">${esc(x.phone)}</a></td><td>${esc(x.city)} — ${esc(x.address)}</td><td>${(x.items || []).map((i) => esc(i.name) + ' × ' + i.qty).join('<br>')}</td><td>${statusSel('orders', d.id, x.status)}</td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">لا توجد طلبات.</td></tr>';
+  });
+  document.addEventListener('change', (e) => { const s = e.target.closest('select[data-c]'); if (s) F.updateDoc(F.doc(db, s.dataset.c, s.dataset.id), { status: s.value }).then(() => toast('تم التحديث')); });
+}
+</script>
+</body>
+</html>

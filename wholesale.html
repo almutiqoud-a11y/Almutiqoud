@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>الجملة — المعتق للعود</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="img/mark_gold.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="wholesale">
+<section style="background:var(--soft);border-bottom:1px solid var(--line)"><div class="wrap" style="display:flex;flex-wrap:wrap;gap:32px;align-items:center;justify-content:space-between;padding-top:48px;padding-bottom:48px">
+  <h1 style="font-size:48px">الجملة من المعتق</h1>
+  <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;flex:0 1 460px">
+    <div class="panel" style="padding:18px;text-align:center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:auto"><path d="M6 3h9l3 3v15H6V3Z"/><path d="M9 10h6M9 14h6M9 18h3"/></svg><div style="font-size:14px;margin-top:6px">فاتورة ضريبية</div></div>
+    <div class="panel" style="padding:18px;text-align:center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:auto"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><div style="font-size:14px;margin-top:6px">شحن للمحلات</div></div>
+    <div class="panel" style="padding:18px;text-align:center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" style="margin:auto"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><div style="font-size:14px;margin-top:6px">متابعة مباشرة</div></div>
+  </div>
+</div></section>
+
+<div class="wrap" style="padding-top:48px">
+  <div class="layout">
+    <main>
+      <h2 style="font-size:30px;color:var(--gold-dark)">قائمة أسعار الجملة</h2>
+      <p class="muted" style="margin:6px 0 18px">الأسعار بالريال لكل كيلو. تظهر الأسعار بعد تفعيل حساب التاجر أو عند طلب عرض السعر.</p>
+      <div class="table-box"><table>
+        <thead><tr><th scope="col">المنتج</th><th scope="col">أقل كمية</th><th scope="col">1 – 5 كجم</th><th scope="col">5 – 20 كجم</th><th scope="col" class="gold">أكثر من 20 كجم</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <div class="grid g3" style="margin-top:24px">
+        <div class="panel" style="background:var(--soft)"><b class="gold" style="font-family:var(--fh);font-size:30px">١</b><div><b>أرسل طلبك</b></div><div class="muted" style="font-size:14px">بيانات المنشأة والكمية المطلوبة</div></div>
+        <div class="panel" style="background:var(--soft)"><b class="gold" style="font-family:var(--fh);font-size:30px">٢</b><div><b>استلم عرض السعر</b></div><div class="muted" style="font-size:14px">نتواصل معك على الجوال أو الواتساب</div></div>
+        <div class="panel" style="background:var(--soft)"><b class="gold" style="font-family:var(--fh);font-size:30px">٣</b><div><b>اعتمد واستلم</b></div><div class="muted" style="font-size:14px">تحويل بنكي ثم الشحن لمحلّك</div></div>
+      </div>
+    </main>
+    <aside>
+      <form class="panel gold form" id="quote" novalidate>
+        <h2 style="margin:0">اطلب عرض سعر</h2>
+        <label class="field">اسم المنشأة<input name="company" required placeholder="مثال: عطور الأصالة"></label>
+        <label class="field">رقم السجل التجاري<input name="cr" inputmode="numeric"></label>
+        <label class="field">رقم الجوال<input name="phone" type="tel" required placeholder="05xxxxxxxx"></label>
+        <div class="row2">
+          <label class="field">المنتج<select name="product" id="prodSel"></select></label>
+          <label class="field">الكمية (كجم)<input name="qty" type="number" min="1" value="5" required></label>
+        </div>
+        <label class="field">ملاحظات<textarea name="notes" rows="3" placeholder="الدرجة المطلوبة، موعد التسليم…"></textarea></label>
+        <div class="msg hidden" id="qMsg"></div>
+        <button class="btn btn-gold" type="submit">أرسل الطلب</button>
+      </form>
+    </aside>
+  </div>
+</div>
+<script type="module">
+import { currentUser, esc, fmt } from './js/layout.js';
+import { getWholesale, submitQuote } from './js/db.js';
+const rows = await getWholesale();
+const cell = (v) => (v == null ? '[السعر]' : fmt(v));
+document.getElementById('rows').innerHTML = rows.map((r) => `<tr><th scope="row">${esc(r.name)}<div class="muted" style="font-size:13px;font-weight:400">${esc(r.origin)}</div></th><td class="muted">${esc(r.moq)}</td><td>${cell(r.p1)}</td><td>${cell(r.p2)}</td><td class="gold" style="font-weight:600">${cell(r.p3)}</td></tr>`).join('');
+document.getElementById('prodSel').innerHTML = rows.map((r) => `<option>${esc(r.name)}</option>`).join('');
+const f = document.getElementById('quote'), m = document.getElementById('qMsg');
+f.onsubmit = async (e) => {
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(f));
+  const show = (t, ok) => { m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
+  if (!d.company || !/^05\d{8}$/.test(d.phone) || !(+d.qty > 0)) return show('أكمل اسم المنشأة والجوال (05xxxxxxxx) والكمية', false);
+  f.querySelector('[type=submit]').disabled = true;
+  try { await submitQuote({ ...d, qty: +d.qty, uid: currentUser?.uid || null }); f.reset(); show('وصلنا طلبك، وسنتواصل معك قريباً.', true); }
+  catch { show('تعذّر إرسال الطلب، حاول مرة أخرى', false); }
+  finally { f.querySelector('[type=submit]').disabled = false; }
+};
+</script>
+</body>
+</html>

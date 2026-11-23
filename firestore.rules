@@ -1,0 +1,74 @@
+rules_version = '2';
+// قواعد حماية قاعدة بيانات «المعتق للعود»
+// غيّر البريد أدناه إلى بريد المدير نفسه الموجود في js/firebase-config.js
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email in ['admin@example.com']; }
+    function myPaddle() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.paddle; }
+
+    // المستخدمون: كل مستخدم يقرأ ويكتب ملفه فقط، ولا يغيّر رقم مزايدته بعد إنشائه
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.paddle == getAfter(/databases/$(database)/documents/counters/paddles).data.next - 1;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.paddle == resource.data.paddle;
+    }
+
+    // عدّاد أرقام المزايدة: يزيد واحداً فقط ومع إنشاء مستخدم في نفس العملية
+    match /counters/paddles {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.next == 12;
+      allow update: if signedIn() && request.resource.data.next == resource.data.next + 1;
+    }
+
+    // المزاد: الكل يقرأ، والمدير فقط يكتب
+    match /auctions/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // القطع: الكل يقرأ؛ المدير يكتب كل شيء؛ المستخدم يزايد فقط بشروط
+    match /lots/{lotId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.status == 'live'
+        && request.time < resource.data.endsAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPrice', 'leaderUid', 'leaderPaddle', 'endsAt', 'bidCount'])
+        && request.resource.data.leaderUid == request.auth.uid
+        && request.resource.data.leaderPaddle == myPaddle()
+        && request.resource.data.currentPrice >= (resource.data.currentPrice == null ? resource.data.openPrice : resource.data.currentPrice) + 100
+        && request.resource.data.bidCount == resource.data.bidCount + 1
+        && (request.resource.data.endsAt == resource.data.endsAt
+            || request.resource.data.endsAt <= request.time + duration.value(40, 's'))
+      );
+
+      match /bids/{bidId} {
+        allow read: if true;
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.paddle == myPaddle()
+          && request.resource.data.amount == getAfter(/databases/$(database)/documents/lots/$(lotId)).data.currentPrice;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // منتجات القطاعي وأسعار الجملة: الكل يقرأ، والمدير يكتب
+    match /products/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /wholesale/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // الطلبات: أي زائر يرسل طلباً جديداً؛ المدير فقط يقرأ ويعدّل
+    match /quotes/{id} {
+      allow create: if request.resource.data.status == 'new' && request.resource.data.phone is string;
+      allow read, update, delete: if isAdmin();
+    }
+    match /orders/{id} {
+      allow create: if request.resource.data.status == 'new' && request.resource.data.items is list && request.resource.data.items.size() > 0;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>متجر القطاعي — المعتق للعود</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="img/mark_gold.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="retail">
+<div class="wrap" style="padding-top:32px">
+  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">
+    <div><div class="muted" style="font-size:14px"><a href="index.html">الرئيسية</a> / القطاعي</div><h1 style="font-size:42px;margin-top:4px">متجر القطاعي</h1></div>
+    <div class="chips" role="group" aria-label="التصنيف" id="cats"></div>
+  </div>
+  <div class="layout">
+    <aside class="panel filters" style="flex:1 1 240px;max-width:300px" aria-label="تصفية">
+      <label class="field" style="margin-bottom:18px">بحث<input type="search" id="q" placeholder="عود، دهن، بخور…"></label>
+      <fieldset id="units"><legend>وحدة البيع</legend></fieldset>
+      <div style="background:var(--soft);border-radius:12px;padding:14px;font-size:14px">تبحث عن كمية أكبر؟ <a href="wholesale.html">أسعار الجملة</a> أو قطعة نادرة في <a href="auction.html">المزاد</a>.</div>
+    </aside>
+    <main><div class="grid g4" id="grid"></div><p class="muted hidden" id="empty">لا توجد منتجات مطابقة.</p></main>
+  </div>
+</div>
+<script type="module">
+import { addToCart, esc, fmt } from './js/layout.js';
+import { getProducts } from './js/db.js';
+const all = await getProducts();
+const CATS = [['all', 'الكل'], ['oud', 'عود'], ['oil', 'دهن عود'], ['bakhoor', 'بخور'], ['mabkhara', 'مباخر'], ['gift', 'هدايا']];
+let cat = new URLSearchParams(location.search).get('cat') || 'all', q = '', units = new Set();
+const unitList = [...new Set(all.map((p) => p.unit).filter(Boolean))];
+document.getElementById('units').insertAdjacentHTML('beforeend', unitList.map((u) => `<label><input type="checkbox" value="${esc(u)}">${esc(u.replace(/^لل/, 'بال'))}</label>`).join(''));
+document.getElementById('units').onchange = (e) => { e.target.checked ? units.add(e.target.value) : units.delete(e.target.value); draw(); };
+document.getElementById('q').oninput = (e) => { q = e.target.value.trim(); draw(); };
+const cats = document.getElementById('cats');
+cats.innerHTML = CATS.map(([k, l]) => `<button class="chip" data-k="${k}">${l}</button>`).join('');
+cats.onclick = (e) => { const b = e.target.closest('.chip'); if (b) { cat = b.dataset.k; draw(); } };
+function draw() {
+  cats.querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', b.dataset.k === cat));
+  const list = all.filter((p) => (cat === 'all' || p.cat === cat) && (!units.size || units.has(p.unit)) && (!q || (p.name + p.sub).includes(q)));
+  document.getElementById('empty').classList.toggle('hidden', !!list.length);
+  const g = document.getElementById('grid');
+  g.innerHTML = list.map((p) => `<article class="product"><div class="img">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">` : ''}${p.badge ? `<span class="tag">${esc(p.badge)}</span>` : ''}</div>
+    <div class="body"><span class="muted" style="font-size:13px">${esc(p.sub)}</span><h3>${esc(p.name)}</h3>
+    <div class="price"><b>${fmt(p.price)}${p.price != null ? ' ريال' : ''}</b><span class="muted">${esc(p.unit)}</span></div>
+    <button class="btn btn-gold btn-sm" data-id="${p.id}">أضف إلى السلة</button></div></article>`).join('');
+  g.querySelectorAll('button[data-id]').forEach((b) => (b.onclick = () => addToCart(all.find((p) => p.id === b.dataset.id))));
+}
+draw();
+</script>
+</body>
+</html>
