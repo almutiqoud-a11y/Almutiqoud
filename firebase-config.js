@@ -2,16 +2,16 @@
 // من: Firebase Console › Project settings › Your apps › Web app › SDK setup and configuration
 // ما دامت القيم فارغة يعمل الموقع في «وضع العرض» ببيانات تجريبية.
 export const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyBqwEBon2EilcLxSlkU8UF49fR_bL0lKsA",
+  authDomain: "almutiqoud-6ccdd.firebaseapp.com",
+  projectId: "almutiqoud-6ccdd",
+  storageBucket: "almutiqoud-6ccdd.firebasestorage.app",
+  messagingSenderId: "561002137969",
+  appId: "1:561002137969:web:0aaf48fe40254a1626ced0"
 };
 
 // بريد حساب المدير (يدخل لوحة التحكم)
-export const ADMIN_EMAILS = ["admin@example.com"];
+export const ADMIN_EMAILS = ["almutiqoud@gmail.com"];
 
 // إعدادات المزاد
 export const AUCTION = {
