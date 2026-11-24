@@ -41,7 +41,7 @@ const demo = {
   user: null,
   auction: { title: 'مزاد العود المعتق', status: 'live', startAt: Date.now() + 2 * 86400e3, currentLotId: 'l3', lotTotal: 12, watchers: 128 },
   lots: {
-    l3: { id: 'l3', no: 3, name: 'عود كمبودي معتق — قطعة واحدة', origin: 'كمبوديا', weight: '[الوزن]', age: '[سنوات التعتيق]', openPrice: 5000, currentPrice: 12500, leaderPaddle: 215, leaderUid: 'x', endsAt: Date.now() + 154e3, status: 'live' },
+    l3: { id: 'l3', no: 3, name: 'عود كمبودي معتق — قطعة واحدة', origin: 'كمبوديا', weight: '[الوزن]', age: 'عود كمبودي فاخر، رائحة عميقة وثابتة، تعتيق طويل.', openPrice: 5000, currentPrice: 12500, leaderPaddle: 215, leaderUid: 'x', endsAt: Date.now() + 154e3, status: 'live' },
     l4: { id: 'l4', no: 4, name: 'دهن عود هندي معتق', status: 'queued', openPrice: null },
     l5: { id: 'l5', no: 5, name: 'عود ماليزي — قطعة', status: 'queued', openPrice: null },
     l6: { id: 'l6', no: 6, name: 'مبخرة نحاس يدوية', status: 'queued', openPrice: null },
