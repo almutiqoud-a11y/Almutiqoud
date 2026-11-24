@@ -93,19 +93,20 @@ export async function onUser(cb) {
 }
 export const refreshUser = () => emitUser();
 
-// التسجيل: الفرد بوثيقة العمل الحر، والتاجر بالسجل التجاري — والحساب «بانتظار الاعتماد» حتى يعتمده المدير
-export async function signUp({ name, phone, email, password, type, docNo, company, country, city }) {
-  const prof = { type, docNo, company: company || '', country: country || 'السعودية', city: city || '', status: 'pending' };
-  if (DEMO) { demo.user = { uid: 'me', name, phone, email, paddle: 42, isAdmin: false, ...prof, status: 'approved' }; demoEmit(); return demo.user; }
+// التسجيل المبسّط: الاسم + رقم الجوال + رمز دخول. البيانات الرسمية تُطلب فقط عند دخول قسم التجار
+export const phoneKey = (p) => { p = String(p || '').replace(/[^\d]/g, ''); if (p.startsWith('00')) p = p.slice(2); if (/^05\d{8}$/.test(p)) p = '966' + p.slice(1); return p; };
+const phoneEmail = (p) => 'p' + phoneKey(p) + '@almutiqoud.app';
+export async function signUp({ name, phone, password }) {
+  if (DEMO) { demo.user = { uid: 'me', name, phone, email: '', paddle: 42, isAdmin: false, type: '', status: 'basic' }; demoEmit(); return demo.user; }
   const { auth, A, db, F } = await init();
-  const cred = await A.createUserWithEmailAndPassword(auth, email, password);
+  const cred = await A.createUserWithEmailAndPassword(auth, phoneEmail(phone), password);
   await A.updateProfile(cred.user, { displayName: name });
   await F.runTransaction(db, async (tx) => {
     const cRef = F.doc(db, 'counters', 'paddles');
     const c = await tx.get(cRef);
     const next = c.exists() ? c.data().next : 11;
     tx.set(cRef, { next: next + 1 });
-    tx.set(F.doc(db, 'users', cred.user.uid), { name, phone, email, paddle: next, ...prof, createdAt: F.serverTimestamp() });
+    tx.set(F.doc(db, 'users', cred.user.uid), { name, phone, paddle: next, type: '', status: 'basic', createdAt: F.serverTimestamp() });
   });
   lastAuth = cred.user; await emitUser();
   return cred.user;
@@ -119,7 +120,9 @@ export async function completeProfile(uid, data) {
   await emitUser();
 }
 
-export async function signIn(email, password) {
+// الدخول برقم الجوال (أو بالبريد لحساب المدير)
+export async function signIn(id, password) {
+  const email = String(id).includes('@') ? String(id).trim() : phoneEmail(id);
   if (DEMO) { demo.user = { uid: 'me', name: 'زائر', email, paddle: 42, isAdmin: email.startsWith('admin'), type: 'individual', docNo: 'FL-0000', country: 'السعودية', status: 'approved' }; demoEmit(); return; }
   const { auth, A } = await init();
   await A.signInWithEmailAndPassword(auth, email, password);
@@ -277,7 +280,7 @@ export async function uploadReceipt(lotId, dataUrl) {
 /* ---------------- إعدادات الموقع (البنك والتواصل) ---------------- */
 // تُعبّأ من لوحة التحكم › الإعدادات، وتُستخدم قيم firebase-config.js إن كانت فارغة
 import { PAYMENT as P0, CONTACT as C0 } from './firebase-config.js';
-const defaults = () => ({ bank: P0.bank, accountName: P0.accountName, iban: P0.iban, days: P0.days, whatsapp: C0.whatsapp, whatsappIntl: C0.whatsappIntl, email: C0.email, cr: C0.cr });
+const defaults = () => ({ commission: P0.commission ?? 10, bank: P0.bank, accountName: P0.accountName, iban: P0.iban, days: P0.days, whatsapp: C0.whatsapp, whatsappIntl: C0.whatsappIntl, email: C0.email, cr: C0.cr });
 export async function watchSettings(cb) {
   if (DEMO) { cb(defaults()); return () => {}; }
   const { db, F } = await init();

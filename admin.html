@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 <style>
 .adm-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
 .adm h3{font-size:22px;color:var(--gold-dark);margin:0 0 12px}
@@ -90,8 +90,9 @@
 
     <section data-p="quotes" class="hidden"><div class="panel"><h3>طلبات عروض الجملة</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنشأة</th><th>الجوال</th><th>المنتج</th><th>الكمية</th><th>ملاحظات</th><th>الحالة</th></tr></thead><tbody id="qRows"></tbody></table></div></div></section>
     <section data-p="wins" class="hidden"><div class="panel"><h3>الفائزون في المزاد</h3>
+      <div id="comSum" class="msg ok" style="margin-bottom:12px"></div>
       <p class="muted" style="margin:-4px 0 12px;font-size:14px">تُسجَّل الترسية تلقائياً عند انتهاء الوقت. أرسل للفائز رسالة التهنئة وبيانات التحويل، ثم حدّث الحالة عند استلام المبلغ.</p>
-      <div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنتج</th><th>المضرب</th><th>الفائز</th><th>المبلغ</th><th>الإيصال</th><th>الحالة</th><th></th></tr></thead><tbody id="winRows"></tbody></table></div></div></section>
+      <div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنتج</th><th>المضرب</th><th>الفائز</th><th>المبلغ</th><th>عمولة المنصة</th><th>صافي التاجر</th><th>الإيصال</th><th>الحالة</th><th></th></tr></thead><tbody id="winRows"></tbody></table></div></div></section>
     <section data-p="members" class="hidden"><div class="panel">
       <h3>الأعضاء والاعتماد</h3>
       <p class="muted" style="margin:-4px 0 12px;font-size:14px">راجع رقم وثيقة العمل الحر أو السجل التجاري، ثم اعتمد العضو ليظهر في «دليل التجار» ويدخل قسم التجار والمراسلة.</p>
@@ -104,7 +105,9 @@
       <div class="table-box"><table><thead><tr><th>آخر نشاط</th><th>الطرفان</th><th>بخصوص</th><th>آخر رسالة</th><th></th></tr></thead><tbody id="chatRows"></tbody></table></div>
     </div></section>
     <section data-p="settings" class="hidden"><form class="panel form" id="setForm" style="max-width:640px">
-      <h3>بيانات التحويل للفائزين</h3>
+      <h3>عمولة المنصة</h3>
+      <label class="field">نسبة المنصة على التاجر عند البيع (%)<input name="commission" type="number" min="0" max="100" step="0.5" value="10"></label>
+      <h3 style="margin-top:10px">بيانات التحويل للفائزين</h3>
       <label class="field">اسم البنك<input name="bank" placeholder="مثال: مصرف الراجحي"></label>
       <label class="field">اسم صاحب الحساب<input name="accountName"></label>
       <label class="field">رقم الآيبان<input name="iban" dir="ltr" placeholder="SA00 0000 0000 0000 0000 0000" style="text-align:left"></label>
@@ -208,7 +211,7 @@ function start({ db, F }) {
       if (!d || d.status !== 'live') return;
       const sold = !forceUnsold && !!d.leaderUid;
       tx.update(ref, { status: sold ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
-      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
+      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: +SET.commission || 10, seller: auction.title || '', status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
       res = sold ? d.leaderPaddle : 0;
     });
     if (res !== null) toast(res ? 'رُسّيت على المضرب ' + res : 'انتهت بدون بيع');
@@ -308,10 +311,10 @@ function start({ db, F }) {
   // الإعدادات
   let SET = { ...PAYMENT };
   watchSettings((s) => { SET = s; const f = $('setForm'); if (document.activeElement && f.contains(document.activeElement)) return;
-    ['bank', 'accountName', 'iban', 'days', 'whatsapp', 'whatsappIntl', 'email', 'cr'].forEach((k) => { const v = s[k] ?? ''; f[k].value = String(v).startsWith('[') ? '' : v; }); });
+    ['commission', 'bank', 'accountName', 'iban', 'days', 'whatsapp', 'whatsappIntl', 'email', 'cr'].forEach((k) => { const v = s[k] ?? ''; f[k].value = String(v).startsWith('[') ? '' : v; }); });
   $('setForm').onsubmit = async (e) => {
     e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
-    d.days = +d.days || 2; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
+    d.days = +d.days || 2; d.commission = d.commission === '' ? 10 : +d.commission; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
     await saveSettings(d); toast('حُفظت الإعدادات');
   };
 
@@ -323,13 +326,16 @@ function start({ db, F }) {
   F.onSnapshot(F.query(col('wins'), F.orderBy('createdAt', 'desc'), F.limit(200)), async (q) => {
     wins = q.docs.map((d) => ({ id: d.id, ...d.data() }));
     await Promise.all(wins.map((w) => userOf(w.uid)));
+    const done = wins.filter((w) => ['paid', 'delivered'].includes(w.status));
+    const com = (w) => (w.amount || 0) * (w.commissionPct ?? SET.commission ?? 10) / 100;
+    $('comSum').innerHTML = `عمولة المنصة (${SET.commission ?? 10}%) — المستحقة من المبيعات المكتملة: <b>${fmt(Math.round(done.reduce((s, w) => s + com(w), 0)))} ريال</b> • المتوقعة من كل الترسيات: <b>${fmt(Math.round(wins.filter((w) => w.status !== 'cancelled').reduce((s, w) => s + com(w), 0)))} ريال</b>`;
     $('winRows').innerHTML = wins.map((w) => { const u = users[w.uid] || {};
       const msg = `مبروك ${u.name || ''}! رسا عليك مزاد «${w.lotName}» في المعتق للعود بمبلغ ${fmt(w.amount)} ريال (مضربك ${w.paddle}).\nنرجو التحويل خلال ${SET.days} يوم:\nالبنك: ${SET.bank}\nاسم الحساب: ${SET.accountName}\nالآيبان: ${SET.iban}\nوارفع صورة الإيصال من صفحة المزاد، أو أرسلها هنا.`;
       const wa = u.phone ? `https://wa.me/966${String(u.phone).replace(/^0/, '')}?text=${encodeURIComponent(msg)}` : '';
-      return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td>
+      return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td><td class="gold"><b>${fmt(Math.round((w.amount || 0) * (w.commissionPct ?? SET.commission ?? 10)) / 100)}</b><div class="muted" style="font-size:12px">${w.commissionPct ?? SET.commission ?? 10}%</div></td><td>${fmt(Math.round((w.amount || 0) * (100 - (w.commissionPct ?? SET.commission ?? 10))) / 100)}</td>
         <td>${w.receipt ? `<button class="btn btn-line" data-rc="${w.id}">عرض</button>` : '<span class="muted">—</span>'}</td>
         <td><select data-c="wins" data-id="${w.id}" style="height:36px;border-radius:8px;border:1px solid var(--line2)">${WST.map(([k, l]) => `<option value="${k}" ${w.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
-        <td>${wa ? `<a class="btn btn-gold" href="${wa}" target="_blank" rel="noopener">رسالة مبروك</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="muted">لا يوجد فائزون بعد.</td></tr>';
+        <td>${wa ? `<a class="btn btn-gold" href="${wa}" target="_blank" rel="noopener">رسالة مبروك</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="10" class="muted">لا يوجد فائزون بعد.</td></tr>';
   });
   $('winRows').onclick = (e) => {
     const b = e.target.closest('[data-rc]'); if (!b) return; const w = wins.find((x) => x.id === b.dataset.rc);

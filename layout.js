@@ -1,5 +1,5 @@
 // الهيدر والفوتر ونافذة الدخول والسلة — مشتركة بين كل الصفحات
-import { onUser, signIn, signUp, signOutUser, resetPassword, submitOrder, DEMO, watchSettings, completeProfile } from './db.js';
+import { onUser, signIn, signUp, signOutUser, submitOrder, DEMO, watchSettings, completeProfile } from './db.js';
 import { CONTACT } from './firebase-config.js';
 
 export const icons = {
@@ -23,7 +23,7 @@ export function toast(t) {
 export let currentUser = null;
 const userSubs = new Set();
 export function onCurrentUser(f) { userSubs.add(f); f(currentUser); }
-onUser((u) => { currentUser = u; userSubs.forEach((f) => f(u)); renderUserArea(); if (u && !u.type && !u.isAdmin && !askedProfile) { askedProfile = true; setTimeout(openCompleteProfile, 400); } });
+onUser((u) => { currentUser = u; userSubs.forEach((f) => f(u)); renderUserArea(); });
 
 /* ---------- السلة (تُحفظ في المتصفح) ---------- */
 const CART_KEY = 'muataq_cart';
@@ -63,7 +63,7 @@ document.body.insertAdjacentHTML('beforeend', `
 function renderUserArea() {
   const el = document.getElementById('userArea'); if (!el) return;
   const u = currentUser;
-  if (!u) { el.innerHTML = '<button class="btn btn-gold btn-sm" id="loginBtn">دخول / تسجيل</button>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
+  if (!u) { el.innerHTML = '<span style="display:flex;gap:8px;align-items:center"><span class="visitor-chip" title="أنت تتصفح كزائر"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>زائر</span><button class="btn btn-gold btn-sm" id="loginBtn">دخول / تسجيل</button></span>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
   el.innerHTML = `<span style="display:flex;gap:8px;align-items:center">
     ${u.paddle ? `<span class="paddle-chip" title="رقم مزايدتك"><b>${u.paddle}</b>رقمك</span>` : ''}
     <a class="icon-btn" href="messages.html" aria-label="الرسائل" title="الرسائل"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4V5Z"/></svg></a>
@@ -105,39 +105,38 @@ export function openAuth(mode = 'in') {
     <h2 id="authT">حسابك في المعتق</h2>
     <div class="tabs2"><button class="chip" data-m="in">دخول</button><button class="chip" data-m="up">حساب جديد</button></div>
     <form class="form" novalidate>
-      <div class="up form" style="gap:16px">
-        <p class="msg ok" style="margin:0;font-size:14px">التسجيل للأفراد بوثيقة العمل الحر، وللتجار بالسجل التجاري. يُراجَع الحساب ويُعتمد قبل دخول قسم التجار.</p>
-        <label class="field">الاسم<input name="name" autocomplete="name"></label>
-        <label class="field">رقم الجوال<input name="phone" type="tel" placeholder="05xxxxxxxx أو +971…" autocomplete="tel" dir="ltr" style="text-align:right"></label>
-        ${idFields()}
-      </div>
-      <label class="field">البريد الإلكتروني<input name="email" type="email" required autocomplete="email"></label>
-      <label class="field">كلمة المرور<input name="password" type="password" required minlength="6" autocomplete="current-password"></label>
+      <label class="field up">الاسم<input name="name" autocomplete="name"></label>
+      <label class="field"><span class="idLbl">رقم الجوال</span><input name="phone" type="tel" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" style="text-align:right"></label>
+      <label class="field">رمز الدخول<input name="password" type="password" minlength="6" placeholder="6 أحرف أو أرقام على الأقل" autocomplete="current-password"></label>
       <div class="msg err hidden"></div>
       <button class="btn btn-gold" type="submit">دخول</button>
-      <button class="btn-link in" type="button" style="background:none;border:0;color:var(--gold-dark);cursor:pointer;font:inherit">نسيت كلمة المرور؟</button>
+      <p class="muted in" style="margin:0;font-size:13px;text-align:center">نسيت رمز الدخول؟ تواصل معنا على واتساب.</p>
+      <p class="muted up" style="margin:0;font-size:13px">يُخصص لك رقم مزايدة دائم فور التسجيل.</p>
     </form></div>`;
   document.body.appendChild(o);
   const f = o.querySelector('form'), err = o.querySelector('.msg.err'), sub = f.querySelector('[type=submit]');
-  bindIdFields(f);
   const set = (m) => { mode = m; o.querySelectorAll('.tabs2 .chip').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
     o.querySelectorAll('.up').forEach((e) => e.classList.toggle('hidden', m !== 'up')); o.querySelectorAll('.in').forEach((e) => e.classList.toggle('hidden', m !== 'in'));
+    o.querySelector('.idLbl').textContent = m === 'up' ? 'رقم الجوال' : 'رقم الجوال (أو بريد المدير)';
+    f.phone.type = m === 'up' ? 'tel' : 'text';
     sub.textContent = m === 'up' ? 'إنشاء الحساب' : 'دخول'; };
   set(mode);
   o.querySelectorAll('.tabs2 .chip').forEach((b) => (b.onclick = () => set(b.dataset.m)));
   const close = () => o.remove();
   o.querySelector('.close').onclick = close; o.onclick = (e) => { if (e.target === o) close(); };
-  o.querySelector('.btn-link').onclick = async () => { const em = f.email.value.trim(); if (!em) { err.textContent = 'اكتب بريدك أولاً'; err.classList.remove('hidden'); return; } await resetPassword(em); toast('أرسلنا رابط إعادة التعيين إلى بريدك'); };
   f.onsubmit = async (e) => {
     e.preventDefault(); err.classList.add('hidden');
-    const d = Object.fromEntries(new FormData(f));
-    let bad = !d.email || !d.password || d.password.length < 6 ? 'اكتب البريد وكلمة مرور من 6 أحرف على الأقل' : '';
-    if (!bad && mode === 'up') bad = !d.name ? 'اكتب الاسم' : !phoneOk(d.phone) ? 'رقم الجوال غير صحيح' : idInvalid(d);
+    const d = Object.fromEntries(new FormData(f)); d.phone = String(d.phone || '').trim();
+    const isMail = d.phone.includes('@');
+    let bad = '';
+    if (mode === 'up' && !String(d.name || '').trim()) bad = 'اكتب الاسم';
+    else if (!(isMail && mode === 'in') && !phoneOk(d.phone)) bad = 'رقم الجوال غير صحيح';
+    else if (!d.password || d.password.length < 6) bad = 'رمز الدخول 6 أحرف أو أرقام على الأقل';
     if (bad) { err.textContent = bad; err.classList.remove('hidden'); return; }
     sub.disabled = true;
     try {
-      if (mode === 'up') { d.phone = d.phone.replace(/[\s-]/g, ''); d.docNo = d.docNo.trim(); await signUp(d); close(); toast('تم التسجيل — حسابك بانتظار الاعتماد'); }
-      else { await signIn(d.email, d.password); close(); toast('تم الدخول'); }
+      if (mode === 'up') { await signUp({ name: d.name.trim(), phone: d.phone.replace(/[\s-]/g, ''), password: d.password }); close(); toast('أهلاً بك في المعتق'); }
+      else { await signIn(d.phone, d.password); close(); toast('تم الدخول'); }
     } catch (x) { err.textContent = authMsg(x); err.classList.remove('hidden'); }
     finally { sub.disabled = false; }
   };
@@ -165,8 +164,8 @@ export function openCompleteProfile() {
 }
 function authMsg(x) {
   const c = x.code || '';
-  if (c.includes('email-already')) return 'هذا البريد مسجل مسبقاً — جرّب الدخول';
-  if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'البريد أو كلمة المرور غير صحيحة';
+  if (c.includes('email-already')) return 'هذا الرقم مسجل مسبقاً — جرّب الدخول';
+  if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'رقم الجوال أو رمز الدخول غير صحيح';
   if (c.includes('weak-password')) return 'كلمة المرور ضعيفة';
   return x.message || 'حدث خطأ، حاول مرة أخرى';
 }

@@ -8,10 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body data-page="auction">
-<div class="wrap" style="padding-top:24px">
+<div class="visitor-gate hidden" id="vGate"><div class="card">
+  <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+  <h2>قاعة المزاد للأعضاء</h2>
+  <p class="muted" style="margin:0">سجّل بالاسم ورقم الجوال فقط لتدخل القاعة وتحصل على مضربك.</p>
+  <button class="btn btn-gold" id="vUp" style="width:100%">تسجيل جديد</button>
+  <button class="btn btn-line btn-sm" id="vIn">لدي حساب — دخول</button>
+</div></div>
+<div class="wrap" style="padding-top:24px" id="aucWrap">
 
   <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
@@ -105,6 +112,7 @@ watchLots((ls) => {
 });
 
 onCurrentUser(async (u) => {
+  $('vGate').classList.toggle('hidden', !!u); $('aucWrap').classList.toggle('locked', !u);
   joinRoom(u); paint(); paintPaddles();
   unWins && unWins(); myWins = []; drawWins();
   if (u) unWins = await watchMyWins(u.uid, (ws) => { myWins = ws; drawWins(); });
@@ -208,6 +216,7 @@ $('bidBtn').onclick = async () => {
 };
 
 /* ---------- الفائز: مبروك + التحويل + الإيصال ---------- */
+$('vUp').onclick = () => openAuth('up'); $('vIn').onclick = () => openAuth('in');
 var WIN_ST = { awaiting_payment: 'بانتظار التحويل', receipt_uploaded: 'تم رفع الإيصال — قيد المراجعة', paid: 'تم استلام المبلغ', delivered: 'تم التسليم', cancelled: 'ملغاة' };
 var pendingShown = '';
 function showPendingWin() {
