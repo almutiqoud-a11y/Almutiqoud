@@ -44,7 +44,7 @@ document.body.insertAdjacentHTML('afterbegin', `
 ${DEMO ? '<div class="topbar" style="background:#2A1C10;color:#fff">وضع العرض: البيانات تجريبية حتى تُضاف إعدادات Firebase</div>' : ''}
 <div class="topbar">مزاد مباشر • أسعار خاصة للتجار والمحلات • طلبات القطاعي لجميع مناطق المملكة</div>
 <header class="site-header"><div class="wrap">
-  <a class="brand" href="index.html"><img src="mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>المنصة الدولية لتجارة العود</small></span></a>
+  <a class="brand" href="index.html"><img src="mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>رائحة تكتمل بها الفخامة</small></span></a>
   <nav class="main-nav" aria-label="القائمة الرئيسية">${nav.map(([h, k, l]) => `<a href="${h}" class="${page === k ? 'active' : ''}">${k === 'auction' ? '<span class="dot"></span>' : ''}${l}</a>`).join('')}</nav>
   <div class="header-actions">
     <button class="icon-btn" id="cartBtn" aria-label="السلة">${icons.bag}<span class="badge-count hidden" id="cartCount">0</span></button>

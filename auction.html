@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body data-page="auction">
 <div class="visitor-gate hidden" id="vGate"><div class="card">
@@ -23,6 +23,7 @@
   <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
+      <div class="photo"><img src="hall-v4.jpg" alt="قاعة مزاد المعتق للعود">
       <div class="scr" aria-live="polite">
         <div class="top"><b id="lotName">—</b><span style="display:flex;gap:1.5cqw;align-items:center;flex:none"><span id="lotOf" style="color:#6B5236"></span><span class="lv" id="liveBadge">مباشر</span></span></div>
         <div class="now"><small>السعر الحالي</small><strong><span id="price">—</span> <span class="u">ريال</span></strong><em>آخر مزايدة من الرقم <b id="leader1">—</b></em></div>
@@ -31,8 +32,7 @@
           <div class="v" id="leader2">—</div><div class="v" id="price2">—</div><div class="v" id="open">—</div><div class="v" id="timer">--:--</div>
         </div>
         <div class="scr-end hidden" id="endBox"><b>انتهى المزاد</b><span id="endLine"></span></div>
-      </div>
-      <div class="photo"><img src="hall-v4.jpg" alt="قاعة مزاد المعتق للعود"><div class="aud-in" id="paddles" aria-label="مضارب الحاضرين"></div><span class="aud-count" id="audCount"></span></div>
+      </div><div class="aud-in" id="paddles" aria-label="مضارب الحاضرين"></div><span class="aud-count" id="audCount"></span></div>
     <div class="controls">
       <div class="grp">
         <span class="lbl">الزيادة</span>
