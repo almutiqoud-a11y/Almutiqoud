@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body data-page="auction">
 <div class="visitor-gate hidden" id="vGate"><div class="card">
@@ -23,7 +23,7 @@
   <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
-      <div class="photo"><img src="hall-v10.jpg" alt="قاعة مزاد المعتق للعود">
+      <div class="photo"><img src="hall-v13.jpg" alt="قاعة مزاد المعتق للعود">
       <div class="scr" aria-live="polite">
         <div class="top"><b id="lotName">—</b><span style="display:flex;gap:1.5cqw;align-items:center;flex:none"><span id="lotOf" style="color:#6B5236"></span><span class="lv" id="liveBadge">مباشر</span></span></div>
         <div class="now"><small>السعر الحالي</small><strong><span id="price">—</span> <span class="u">ريال</span></strong><em>آخر مزايدة من الرقم <b id="leader1">—</b></em></div>
@@ -80,7 +80,7 @@ import { AUCTION, PAYMENT, CONTACT } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
 const SEATS = [
-  { l: 13.80, t: 52.56, w: 6.64, f: 1 }, { l: 83.96, t: 52.86, w: 6.80, f: 1 }, { l: 8.27, t: 48.98, w: 3.48, f: 1 }, { l: 87.22, t: 46.50, w: 3.97 }, { l: 17.20, t: 46.44, w: 3.24 }, { l: 79.79, t: 43.23, w: 2.91 }, { l: 75.20, t: 40.02, w: 2.59 }
+  { l: 14.26, t: 53.81, w: 5.71, f: 1 }, { l: 84.43, t: 54.14, w: 5.85, f: 1 }, { l: 8.52, t: 49.63, w: 2.99, f: 1 }, { l: 87.50, t: 47.25, w: 3.41 }, { l: 17.43, t: 47.05, w: 2.78 }, { l: 80.00, t: 43.78, w: 2.51 }, { l: 75.38, t: 40.50, w: 2.23 }, { l: 96.59, t: 51.18, w: 2.13 }, { l: 22.80, t: 43.17, w: 1.99 }
 ];
 const ar = (n) => String(n);
 var auTitle = '', present = [], myWins = [], unWins = null, SET = { ...PAYMENT, ...CONTACT };
