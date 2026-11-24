@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=28">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body data-page="auction">
 <div class="visitor-gate hidden" id="vGate"><div class="card">
@@ -33,6 +33,7 @@
         </div>
         <div class="scr-end hidden" id="endBox"><b>انتهى المزاد</b><span id="endLine"></span></div>
       </div><div class="aud-in" id="paddles" aria-label="مضارب الحاضرين"></div><span class="aud-count" id="audCount"></span></div>
+      <div class="mob-row" id="mobRow" aria-label="مضارب الحاضرين"></div>
     <div class="controls">
       <div class="grp">
         <span class="lbl">الزيادة</span>
@@ -79,6 +80,7 @@ import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watch
 import { AUCTION, PAYMENT, CONTACT } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
+const MOBSEATS = [{ x: 65.92, b: 42.86, h: 1 }, { x: 28.56, b: 45.24, h: 1 }, { x: 44.84, b: 39.52, h: 1 }, { x: 89.24, b: 37.62, h: 0 }, { x: 10.90, b: 41.90, h: 0 }, { x: 93.90, b: 42.86, h: 0 }];
 const SEATS = [
   { x: 17.12, y: 61.46, d: 5.82, f: 1 }, { x: 87.36, y: 61.98, d: 5.97, f: 1 }, { x: 10.01, y: 53.39, d: 3.12, f: 1 }, { x: 89.20, y: 51.82, d: 3.41 }, { x: 18.82, y: 50.52, d: 2.84 }, { x: 81.25, y: 47.14, d: 2.56 }, { x: 76.49, y: 43.49, d: 2.27 }
 ];
@@ -135,6 +137,12 @@ function paintPaddles() {
     const cls = ['seat', s.f ? 'front' : '', p == null ? 'empty' : '', isL ? 'lead' : '', isL && raise ? 'raise' : '', isMe ? 'me' : ''].join(' ');
     const tag = isL ? '<span class="tag">الأعلى</span>' : isMe ? '<span class="tag">أنت</span>' : '';
     return `<div class="${cls} pd" style="left:${s.x}%;top:${s.y}%;width:${s.d}%">${tag}<span class="pd-in"><img class="pd-m" src="mark_gold.png" alt=""><span class="pd-t">المعتق للعود</span><span class="num">${p != null ? esc(ar(p)) : ''}</span></span></div>`;
+  }).join('');
+  // الجوال: صف المزايدين أمام الشاشة — مضرب لكل حاضر في يده
+  $('mobRow').innerHTML = MOBSEATS.map((s, i) => {
+    const p = seated[i], isL = p != null && p === leader, isMe = p != null && me != null && p === me;
+    if (p == null && !s.h) return '';
+    return `<div class="mp ${p == null ? 'empty' : ''} ${isL ? 'lead' : ''} ${isL && raise ? 'raise' : ''}" style="left:${s.x}%;bottom:${s.b}%">${isL ? '<span class="tag">الأعلى</span>' : isMe ? '<span class="tag">أنت</span>' : ''}<img src="paddle.png" alt=""><span class="mp-n">${p != null ? esc(ar(p)) : ''}</span></div>`;
   }).join('');
 }
 

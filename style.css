@@ -353,3 +353,48 @@ tbody tr:nth-child(even){background:var(--soft)}
 .seat.pd .pd-t{font:700 12.5cqw/1 var(--fb);color:#E8CF94;letter-spacing:0}
 .seat.pd .num{font:700 30cqw/1 var(--fb);color:#F6E3B0}
 .seat.pd.empty .pd-m{height:34%}
+
+/* صف المضارب (للجوال) */
+.mob-row{display:none}
+@media (max-width:640px){
+  .photo{aspect-ratio:960/400}
+  .photo>img{inset:auto;left:-39.58%;top:-5%;width:146.67%;height:192%;object-fit:fill}
+  .photo .scr{left:2%;right:30%;top:5%;bottom:6%;padding:2cqw 2.6cqw;gap:1.4cqw}
+  .photo .scr .now strong{font-size:13cqw}.photo .scr .tbl .v{font-size:5.4cqw}.photo .scr .tbl .h{font-size:3.4cqw}.photo .scr .top{font-size:3.4cqw}.photo .scr .top b{font-size:4.2cqw}
+  .photo .aud-in{display:none}
+  .photo .aud-count{bottom:6px;left:auto;right:6px}
+  .mob-row{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:10px 8px;padding:30px 10px 12px;background:linear-gradient(#3A2414,#22170E);border-top:2px solid #C9A45C;min-height:120px}
+  .mp{position:relative;width:46px;display:flex;flex-direction:column;align-items:center;transition:transform .3s}
+  .mp img{width:100%;height:auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
+  .mp-n{position:absolute;top:38%;left:0;right:0;text-align:center;font:700 16px/1 var(--fb);color:#F6E3B0;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  .mp.lead{transform:translateY(-14px) scale(1.12)}
+  .mp.lead img{filter:drop-shadow(0 0 10px rgba(246,223,163,.95))}
+  .mp.raise{animation:mpup .7s ease-out}
+  @keyframes mpup{0%{transform:translateY(20px)}100%{transform:translateY(-14px) scale(1.12)}}
+  .mp .tag{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:2px;white-space:nowrap;background:#C9A45C;color:#1E140B;font:700 10px var(--fb);border-radius:999px;padding:1px 6px}
+  .mp-empty{color:#BFAE95;margin:auto;font-size:14px}
+}
+/* الجوال — فكرة الشاشة أمام صف المزايدين */
+@media (max-width:640px){
+  .photo{aspect-ratio:auto;background:linear-gradient(180deg,#3A2A1C,#20160D);padding:58px 10px 12px;overflow:visible}
+  .photo::before{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);width:140px;height:44px;background:url(logo_gold.png) center/contain no-repeat}
+  .photo>img{display:none}
+  .photo .scr{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:100%;aspect-ratio:16/10.5;border:3px solid #C9A45C;box-shadow:0 0 0 4px #1A110A,0 8px 24px rgba(0,0,0,.5)}
+  .photo .aud-count{top:14px;bottom:auto;left:10px;right:auto}
+  .mob-row{display:block;position:relative;z-index:6;aspect-ratio:1376/420;background:url(bidders-row.jpg) center bottom/100% auto no-repeat,linear-gradient(#20160D,#2b2b2b);padding:0;min-height:0;border-top:0}
+  .mp{position:absolute;width:7.2%;transform:translateX(-50%);display:block}
+  .mp img{width:100%;height:auto;display:block}
+  .mp-n{position:absolute;top:36%;left:0;right:0;text-align:center;font:700 3.4vw/1 var(--fb);color:#F6E3B0;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+  .mp.lead{transform:translateX(-50%) translateY(-14%) scale(1.15)}
+  .mp.lead img{filter:drop-shadow(0 0 8px rgba(246,223,163,.95))}
+  .mp.raise{animation:mpup2 .7s ease-out}
+  @keyframes mpup2{0%{transform:translateX(-50%) translateY(20%)}100%{transform:translateX(-50%) translateY(-14%) scale(1.15)}}
+  .mp .tag{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font:700 9px var(--fb);background:#C9A45C;color:#1E140B;border-radius:999px;padding:0 5px;white-space:nowrap;margin-bottom:2px}
+  .controls{padding:10px 12px;gap:8px}
+  .controls .lbl{font-size:12px}
+  .controls .inc{height:40px;min-width:64px;font-size:15px}
+  .controls .nb b{font-size:17px}
+  .controls .st-line{font-size:13px}
+  .bid-paddle{height:48px;font-size:20px;padding:0 18px 0 8px;gap:8px}
+  .bid-paddle .pn{width:22px;height:42px;font-size:9px;padding-top:15px}
+}
