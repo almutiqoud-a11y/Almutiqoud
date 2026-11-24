@@ -408,3 +408,10 @@ tbody tr:nth-child(even){background:var(--soft)}
   .paddle-chip b{min-width:30px;height:32px;font-size:15px}
   .brand b{font-size:22px}.brand img{width:34px;height:44px}
 }
+/* ألوان كتابة الشاشة */
+.scr .top b{color:#111}
+.scr .top #lotOf,.scr .top span{color:#1a1a1a!important;font-weight:600}
+.scr .top .lv{color:#fff!important}
+.scr .now small{color:#1B2A4A;font-weight:700}
+.scr .now em{color:#222;font-weight:600}
+.scr .now em b{color:#B8392A}
