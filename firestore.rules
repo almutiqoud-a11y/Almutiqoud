@@ -41,8 +41,8 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPrice', 'leaderUid', 'leaderPaddle', 'endsAt', 'bidCount'])
         && request.resource.data.leaderUid == request.auth.uid
         && request.resource.data.leaderPaddle == myPaddle()
-        && request.resource.data.currentPrice >= (resource.data.currentPrice == null ? resource.data.openPrice : resource.data.currentPrice) + 100
-        && request.resource.data.bidCount == resource.data.bidCount + 1
+        && request.resource.data.currentPrice >= (resource.data.get('currentPrice', null) == null ? resource.data.openPrice : resource.data.currentPrice) + 50
+        && request.resource.data.bidCount == resource.data.get('bidCount', 0) + 1
         && (request.resource.data.endsAt == resource.data.endsAt
             || request.resource.data.endsAt <= request.time + duration.value(40, 's'))
       );
@@ -55,6 +55,23 @@ service cloud.firestore {
           && request.resource.data.amount == getAfter(/databases/$(database)/documents/lots/$(lotId)).data.currentPrice;
         allow update, delete: if isAdmin();
       }
+    }
+
+    // الفائزون: المدير يسجّل الترسية؛ الفائز يقرأ طلبه ويرفع إيصال التحويل فقط
+    match /wins/{lotId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['receipt', 'status', 'receiptAt'])
+        && request.resource.data.status == 'receipt_uploaded'
+      );
+    }
+
+    // الحضور في قاعة المزاد
+    match /presence/{uid} {
+      allow read: if true;
+      allow write: if signedIn() && request.auth.uid == uid;
     }
 
     // منتجات القطاعي وأسعار الجملة: الكل يقرأ، والمدير يكتب

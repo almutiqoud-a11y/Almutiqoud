@@ -8,11 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body data-page="auction">
 <div class="wrap" style="padding-top:24px">
 
+  <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
       <img src="hall-v2.jpg" alt="قاعة مزاد المعتق للعود">
@@ -23,6 +24,7 @@
           <div class="h">المشتري<i>Buyer</i></div><div class="h">آخر سعر<i>Last Bid</i></div><div class="h">أقل سعر<i>Lowest Bid</i></div><div class="h">الوقت المتبقي<i>Remaining Time</i></div>
           <div class="v" id="leader2">—</div><div class="v" id="price2">—</div><div class="v" id="open">—</div><div class="v" id="timer">--:--</div>
         </div>
+        <div class="scr-end hidden" id="endBox"><b>انتهى المزاد</b><span id="endLine"></span></div>
       </div>
     </div>
 
@@ -67,16 +69,16 @@
   </div>
 </div>
 <script type="module">
-import { currentUser, onCurrentUser, openAuth, fmt, esc, toast } from './layout.js';
-import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence } from './db.js';
-import { AUCTION } from './firebase-config.js';
+import { currentUser, onCurrentUser, openAuth, fmt, esc, toast, shrinkImage, icons } from './layout.js';
+import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt } from './db.js';
+import { AUCTION, PAYMENT, CONTACT } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
 const SEATS = [
   { l: 41.16, t: 25.24, w: 8.74, f: 1 }, { l: 19.53, t: 32.20, w: 6.13, f: 1 }, { l: 70.53, t: 38.79, w: 5.67, f: 1 }, { l: 41.59, t: -10.34, w: 5.67 }, { l: 64.98, t: -12.22, w: 5.33 }, { l: 21.25, t: -11.54, w: 5.11 }, { l: 92.21, t: 3.64, w: 7.60, f: 1 }, { l: -0.50, t: 9.90, w: 6.58, f: 1 }, { l: 36.30, t: -2.38, w: 2.88 }, { l: 44.81, t: -10.23, w: 2.88 }
 ];
 const ar = (n) => String(n);
-var present = [];
+var present = [], myWins = [], unWins = null;
 let lot = null, bids = [], inc = AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null, lastLeader = null;
 
 $('incs').innerHTML = AUCTION.increments.map((v) => `<button class="inc" data-v="${v}">+${fmt(v)}</button>`).join('');
@@ -103,7 +105,11 @@ watchLots((ls) => {
   $('queue').innerHTML = q.length ? q.map((l) => `<div class="q"><div class="thumb">${l.image ? `<img src="${esc(l.image)}" alt="">` : ''}</div><div><div class="muted" style="font-size:12px">القطعة ${esc(l.no)}</div><b style="font-size:15px">${esc(l.name)}</b><div class="gold" style="font-size:13px">يبدأ من ${fmt(l.openPrice)}${l.openPrice != null ? ' ريال' : ''}</div></div></div>`).join('') : '<p class="muted">لا توجد قطع أخرى في هذا المزاد.</p>';
 });
 
-onCurrentUser((u) => { joinRoom(u); paint(); paintPaddles(); });
+onCurrentUser(async (u) => {
+  joinRoom(u); paint(); paintPaddles();
+  unWins && unWins(); myWins = []; drawWins();
+  if (u) unWins = await watchMyWins(u.uid, (ws) => { myWins = ws; drawWins(); });
+});
 watchPresence((ps) => { present = ps; paintPaddles(); });
 
 function ago(t) { if (!t) return 'الآن'; const s = Math.round((Date.now() - t) / 1000); return s < 10 ? 'الآن' : s < 60 ? `قبل ${s} ث` : s < 3600 ? `قبل ${Math.round(s / 60)} د` : `قبل ${Math.round(s / 3600)} س`; }
@@ -168,6 +174,15 @@ function paint() {
   else if (lot.leaderUid === u.uid) { st.textContent = 'أنت الأعلى الآن'; st.style.color = '#8FD19E'; }
   else { st.textContent = lot.leaderUid ? 'تمت المزايدة عليك' : ''; st.style.color = '#F0A090'; }
   $('bidBtn').disabled = !live;
+  // رسالة انتهاء المزاد على الشاشة
+  const ended = !live && (lot.status !== 'live' || (lot.endsAt && Date.now() >= lot.endsAt));
+  $('endBox').classList.toggle('hidden', !ended);
+  if (ended) {
+    const won = lot.leaderPaddle != null && lot.status !== 'unsold';
+    $('endLine').innerHTML = won ? `رسا المزاد على المضرب <strong>${esc(lot.leaderPaddle)}</strong> بمبلغ <strong>${fmt(lot.currentPrice)}</strong> ريال` : 'لم تُبع هذه القطعة';
+    if (won && u && lot.leaderUid === u.uid && !myWins.some((w) => w.lotId === lot.id)) showPendingWin();
+  }
+  drawWins();
 }
 
 setInterval(() => {
@@ -183,9 +198,69 @@ $('bidBtn').onclick = async () => {
   if (!currentUser) { openAuth('up'); return; }
   $('bidBtn').disabled = true;
   try { const a = await placeBid(lot.id, inc, currentUser); toast('زدت إلى ' + fmt(a) + ' ريال'); }
-  catch (x) { $('bidErr').textContent = x.message?.includes('permission') ? 'تعذّرت المزايدة — حدّث الصفحة وحاول مرة أخرى' : x.message; $('bidErr').classList.remove('hidden'); }
+  catch (x) {
+    const perm = (x.code || '').includes('permission') || (x.message || '').includes('permission');
+    $('bidErr').textContent = perm ? 'تعذّرت المزايدة: رُفضت من قواعد الحماية — تأكد من تحديث القواعد في Firebase، أو أن الوقت لم ينتهِ.' : (x.message || 'تعذّرت المزايدة');
+    $('bidErr').classList.remove('hidden'); console.error(x);
+  }
   finally { paint(); }
 };
+
+/* ---------- الفائز: مبروك + التحويل + الإيصال ---------- */
+var WIN_ST = { awaiting_payment: 'بانتظار التحويل', receipt_uploaded: 'تم رفع الإيصال — قيد المراجعة', paid: 'تم استلام المبلغ', delivered: 'تم التسليم', cancelled: 'ملغاة' };
+var pendingShown = '';
+function showPendingWin() {
+  if (pendingShown === lot.id) return; pendingShown = lot.id;
+  openWinModal({ lotId: lot.id, lotName: lot.name, paddle: lot.leaderPaddle, amount: lot.currentPrice, status: 'pending' });
+}
+function drawWins() {
+  const box = $('winBanner'); if (!box) return;
+  const open = myWins.filter((w) => w.status === 'awaiting_payment' || w.status === 'receipt_uploaded');
+  box.innerHTML = open.map((w) => `<div class="win-banner"><div><b>مبروك! رسا عليك «${esc(w.lotName)}»</b><span>بمبلغ ${fmt(w.amount)} ريال • ${WIN_ST[w.status]}</span></div><button class="btn btn-gold btn-sm" data-win="${esc(w.lotId)}">${w.status === 'awaiting_payment' ? 'أكمل التحويل' : 'تفاصيل الطلب'}</button></div>`).join('');
+  box.querySelectorAll('[data-win]').forEach((b) => (b.onclick = () => openWinModal(myWins.find((w) => w.lotId === b.dataset.win))));
+  const fresh = open.find((w) => w.status === 'awaiting_payment' && !seenWin(w.lotId));
+  if (fresh) { markWin(fresh.lotId); openWinModal(fresh); }
+}
+function seenWin(id) { try { return localStorage.getItem('win_' + id); } catch { return pendingShown === id; } }
+function markWin(id) { try { localStorage.setItem('win_' + id, '1'); } catch {} }
+function waLink(w) {
+  const n = (CONTACT.whatsappIntl || '').replace(/\D/g, ''); if (!n) return '';
+  const t = `السلام عليكم، أنا صاحب المضرب ${w.paddle}. رسا عليّ مزاد «${w.lotName}» بمبلغ ${fmt(w.amount)} ريال.`;
+  return `https://wa.me/${n}?text=${encodeURIComponent(t)}`;
+}
+function openWinModal(w) {
+  document.querySelector('.overlay.win')?.remove();
+  const pending = w.status === 'pending';
+  const o = document.createElement('div'); o.className = 'overlay win';
+  const wa = waLink(w);
+  o.innerHTML = `<div class="modal win-modal" role="dialog" aria-modal="true" aria-labelledby="winT">
+    <button class="icon-btn close" aria-label="إغلاق">${icons.x}</button>
+    <div class="win-head"><img src="paddle.png" alt=""><span>${esc(w.paddle)}</span></div>
+    <h2 id="winT" style="text-align:center">مبروك! رسا عليك المزاد</h2>
+    <p style="text-align:center;margin:0 0 14px">«${esc(w.lotName)}» بمبلغ <b>${fmt(w.amount)} ريال</b></p>
+    ${pending ? `<div class="msg ok">أنت صاحب أعلى مزايدة. بانتظار اعتماد الترسية من المعتق، وستظهر لك تفاصيل التحويل هنا خلال لحظات.</div>` : `
+    <div class="pay-box">
+      <div class="muted" style="font-size:14px;margin-bottom:6px">حوّل المبلغ خلال ${PAYMENT.days} يوم إلى:</div>
+      <div class="pay-row"><span>البنك</span><b>${esc(PAYMENT.bank)}</b></div>
+      <div class="pay-row"><span>اسم الحساب</span><b>${esc(PAYMENT.accountName)}</b></div>
+      <div class="pay-row"><span>الآيبان</span><b dir="ltr" id="ibanTxt">${esc(PAYMENT.iban)}</b><button class="btn btn-line btn-sm" id="copyIban" style="height:36px">نسخ</button></div>
+      <div class="pay-row"><span>المبلغ</span><b>${fmt(w.amount)} ريال</b></div>
+      <div class="pay-row"><span>الحالة</span><b class="gold">${WIN_ST[w.status] || w.status}</b></div>
+    </div>
+    ${w.status === 'awaiting_payment' || w.status === 'receipt_uploaded' ? `<label class="btn btn-gold" style="width:100%;margin-top:14px">${w.receipt ? 'استبدال صورة الإيصال' : 'ارفع صورة إيصال التحويل'}<input type="file" accept="image/*" id="rcpt" class="hidden"></label>` : ''}
+    ${w.receipt ? `<img src="${w.receipt}" alt="إيصال التحويل" style="max-height:160px;margin:12px auto 0;border-radius:10px">` : ''}
+    <div class="msg hidden" id="rcptMsg" style="margin-top:10px"></div>`}
+    ${wa ? `<a class="btn btn-line" style="width:100%;margin-top:10px" href="${wa}" target="_blank" rel="noopener">تواصل معنا على واتساب</a>` : ''}
+  </div>`;
+  document.body.appendChild(o);
+  const close = () => o.remove(); o.querySelector('.close').onclick = close; o.onclick = (e) => { if (e.target === o) close(); };
+  o.querySelector('#copyIban')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(PAYMENT.iban); toast('نُسخ الآيبان'); } catch { toast('انسخه يدوياً'); } });
+  o.querySelector('#rcpt')?.addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return; const m = o.querySelector('#rcptMsg');
+    try { await uploadReceipt(w.lotId, await shrinkImage(f)); m.className = 'msg ok'; m.textContent = 'وصلنا الإيصال، وسنؤكد استلام المبلغ قريباً.'; }
+    catch (x) { m.className = 'msg err'; m.textContent = 'تعذّر رفع الإيصال، حاول مرة أخرى'; console.error(x); }
+  });
+}
 </script>
 </body>
 </html>

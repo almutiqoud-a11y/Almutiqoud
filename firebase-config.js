@@ -19,9 +19,18 @@ export const AUCTION = {
   antiSnipeSeconds: 30           // أي مزايدة في آخر 30 ثانية تمدّد الوقت إلى 30 ثانية
 };
 
+// بيانات التحويل للفائز في المزاد
+export const PAYMENT = {
+  bank: "[اسم البنك]",
+  accountName: "[اسم صاحب الحساب]",
+  iban: "[رقم الآيبان SA...]",
+  days: 2                          // مهلة التحويل بالأيام
+};
+
 // بيانات التواصل
 export const CONTACT = {
   whatsapp: "[رقم الواتساب]",
+  whatsappIntl: "",               // رقم الواتساب بالصيغة الدولية بدون + مثل 9665XXXXXXXX
   email: "[البريد الإلكتروني]",
   cr: "[السجل التجاري]"
 };

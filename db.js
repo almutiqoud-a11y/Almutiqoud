@@ -233,3 +233,23 @@ export async function watchPresence(cb) {
   const t = setInterval(emit, 15000);
   return () => { un(); clearInterval(t); };
 }
+
+/* ---------------- الفائزون ---------------- */
+const demoWins = {};
+export async function watchMyWins(uid, cb) {
+  if (DEMO) {
+    const f = () => {
+      const l = demo.lots.l3;
+      if (l && l.leaderUid === uid && Date.now() > l.endsAt && !demoWins.l3) demoWins.l3 = { lotId: 'l3', lotName: l.name, lotNo: l.no, uid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment', createdAt: Date.now() };
+      cb(Object.values(demoWins).filter((w) => w.uid === uid));
+    };
+    demo.subs.add(f); f(); const t = setInterval(f, 2000); return () => { demo.subs.delete(f); clearInterval(t); };
+  }
+  const { db, F } = await init();
+  return F.onSnapshot(F.query(F.collection(db, 'wins'), F.where('uid', '==', uid)), (s) => cb(s.docs.map((d) => ({ ...d.data(), createdAt: ms(d.data().createdAt), dueAt: ms(d.data().dueAt) }))), () => cb([]));
+}
+export async function uploadReceipt(lotId, dataUrl) {
+  if (DEMO) { if (demoWins[lotId]) { demoWins[lotId].receipt = dataUrl; demoWins[lotId].status = 'receipt_uploaded'; demoEmit(); } return; }
+  const { db, F } = await init();
+  await F.updateDoc(F.doc(db, 'wins', lotId), { receipt: dataUrl, status: 'receipt_uploaded', receiptAt: Date.now() });
+}

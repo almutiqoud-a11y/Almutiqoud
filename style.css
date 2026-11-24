@@ -273,3 +273,22 @@ tbody tr:nth-child(even){background:var(--soft)}
 .vid{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000}
 .vid.tall{aspect-ratio:9/16;max-width:320px;margin:0 auto}
 .vid iframe,.vid video{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+/* انتهاء المزاد على الشاشة */
+.scr-end{position:absolute;inset:0;background:rgba(251,246,236,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqw;text-align:center;border-radius:4px;padding:4cqw}
+.scr-end b{font-family:var(--fh);font-size:10cqw;color:#3A2414;line-height:1.1}
+.scr-end span{font-size:4.4cqw;color:#5C4A36}
+.scr-end strong{color:#1A110A}
+/* الفائز */
+.win-banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#FBF3E2;border:2px solid var(--gold);border-radius:16px;padding:14px 18px;margin-bottom:16px}
+.win-banner b{display:block;font-family:var(--fh);font-size:20px;color:var(--gold-dark)}
+.win-banner span{font-size:14px;color:var(--text2)}
+.win-modal{max-width:460px}
+.win-head{position:relative;width:70px;margin:0 auto 6px}
+.win-head img{width:100%}
+.win-head span{position:absolute;top:37%;left:0;right:0;text-align:center;font:700 22px var(--fb);color:#F6DFA3}
+.pay-box{background:var(--soft);border:1px solid var(--line2);border-radius:14px;padding:14px 16px}
+.pay-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.pay-row:last-child{border-bottom:0}
+.pay-row span{color:var(--muted);font-size:14px}
+.pay-row b{font-size:15px;word-break:break-all}
