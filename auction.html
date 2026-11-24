@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body data-page="auction">
 <div class="visitor-gate hidden" id="vGate"><div class="card">
@@ -23,7 +23,7 @@
   <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
-      <div class="photo"><img src="hall-v16.jpg" alt="قاعة مزاد المعتق للعود">
+      <div class="photo"><img src="hall-v17.jpg" alt="قاعة مزاد المعتق للعود">
       <div class="scr" aria-live="polite">
         <div class="top"><b id="lotName">—</b><span style="display:flex;gap:1.5cqw;align-items:center;flex:none"><span id="lotOf" style="color:#6B5236"></span><span class="lv" id="liveBadge">مباشر</span></span></div>
         <div class="now"><small>السعر الحالي</small><strong><span id="price">—</span> <span class="u">ريال</span></strong><em>آخر مزايدة من الرقم <b id="leader1">—</b></em></div>
@@ -134,7 +134,7 @@ function paintPaddles() {
     const p = seated[i], isL = p != null && p === leader, isMe = p != null && me != null && p === me;
     const cls = ['seat', s.f ? 'front' : '', p == null ? 'empty' : '', isL ? 'lead' : '', isL && raise ? 'raise' : '', isMe ? 'me' : ''].join(' ');
     const tag = isL ? '<span class="tag">الأعلى</span>' : isMe ? '<span class="tag">أنت</span>' : '';
-    return `<div class="${cls} pd" style="left:${s.x}%;top:${s.y}%;width:${s.d}%">${tag}<span class="pd-in"><span class="pd-t">المعتق للعود</span><span class="num">${p != null ? esc(ar(p)) : ''}</span></span></div>`;
+    return `<div class="${cls} pd" style="left:${s.x}%;top:${s.y}%;width:${s.d}%">${tag}<span class="pd-in"><img class="pd-m" src="mark_gold.png" alt=""><span class="pd-t">المعتق للعود</span><span class="num">${p != null ? esc(ar(p)) : ''}</span></span></div>`;
   }).join('');
 }
 

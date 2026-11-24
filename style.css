@@ -347,4 +347,9 @@ tbody tr:nth-child(even){background:var(--soft)}
 .seat.pd.raise{animation:pdglow 1s ease-out}
 @keyframes pdglow{0%{box-shadow:0 0 0 0 rgba(246,223,163,0)}50%{box-shadow:0 0 0 4px #F6DFA3,0 0 30px 10px rgba(246,223,163,.95)}100%{box-shadow:0 0 0 2px #F6DFA3,0 0 18px 4px rgba(246,223,163,.85)}}
 .seat.pd .tag{top:auto;bottom:100%;margin:0 0 4px}
-.seat.pd img{display:none}
+
+.seat.pd .pd-in{justify-content:center;padding:0 0 4%;gap:3%}
+.seat.pd .pd-m{display:block;height:30%;width:auto;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.seat.pd .pd-t{font:700 12.5cqw/1 var(--fb);color:#E8CF94;letter-spacing:0}
+.seat.pd .num{font:700 30cqw/1 var(--fb);color:#F6E3B0}
+.seat.pd.empty .pd-m{height:34%}
