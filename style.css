@@ -335,3 +335,16 @@ tbody tr:nth-child(even){background:var(--soft)}
 .photo .scr .tbl .v{font-size:4.6cqw;padding:.6cqw .4cqw}.photo .scr .tbl .h{font-size:3cqw;padding:.5cqw .3cqw}.photo .scr .tbl .h i{font-size:2cqw}
 .photo .scr .top{font-size:3.2cqw}.photo .scr .top b{font-size:3.8cqw}
 .seat:not(.front) .tag{bottom:auto;top:100%;margin:4px 0 0}
+
+/* أرقام على مضارب الصورة الأصلية */
+.seat.pd{position:absolute;aspect-ratio:1/1;height:auto;transform:translate(-50%,-50%);border-radius:50%;transition:box-shadow .4s}
+.seat.pd .pd-in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:16%;gap:2%}
+.seat.pd .pd-t{font:600 13cqw var(--fh);color:#E3C789;line-height:1;white-space:nowrap;text-shadow:0 1px 1px rgba(0,0,0,.5)}
+.seat.pd .num{position:static;top:auto;font:700 34cqw var(--fh);color:#F1D9A0;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.seat.pd.empty .num{display:none}
+.seat.pd.empty{filter:none}
+.seat.pd.lead{transform:translate(-50%,-50%);box-shadow:0 0 0 2px #F6DFA3,0 0 18px 4px rgba(246,223,163,.85)}
+.seat.pd.raise{animation:pdglow 1s ease-out}
+@keyframes pdglow{0%{box-shadow:0 0 0 0 rgba(246,223,163,0)}50%{box-shadow:0 0 0 4px #F6DFA3,0 0 30px 10px rgba(246,223,163,.95)}100%{box-shadow:0 0 0 2px #F6DFA3,0 0 18px 4px rgba(246,223,163,.85)}}
+.seat.pd .tag{top:auto;bottom:100%;margin:0 0 4px}
+.seat.pd img{display:none}
