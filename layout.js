@@ -1,5 +1,5 @@
 // الهيدر والفوتر ونافذة الدخول والسلة — مشتركة بين كل الصفحات
-import { onUser, signIn, signUp, signOutUser, resetPassword, submitOrder, DEMO, watchSettings } from './db.js';
+import { onUser, signIn, signUp, signOutUser, resetPassword, submitOrder, DEMO, watchSettings, completeProfile } from './db.js';
 import { CONTACT } from './firebase-config.js';
 
 export const icons = {
@@ -23,7 +23,7 @@ export function toast(t) {
 export let currentUser = null;
 const userSubs = new Set();
 export function onCurrentUser(f) { userSubs.add(f); f(currentUser); }
-onUser((u) => { currentUser = u; userSubs.forEach((f) => f(u)); renderUserArea(); });
+onUser((u) => { currentUser = u; userSubs.forEach((f) => f(u)); renderUserArea(); if (u && !u.type && !u.isAdmin && !askedProfile) { askedProfile = true; setTimeout(openCompleteProfile, 400); } });
 
 /* ---------- السلة (تُحفظ في المتصفح) ---------- */
 const CART_KEY = 'muataq_cart';
@@ -38,13 +38,13 @@ function setQty(id, d) { const c = getCart(); const i = c.find((x) => x.id === i
 
 /* ---------- الهيدر والفوتر ---------- */
 const page = document.body.dataset.page;
-const nav = [['index.html', 'home', 'الرئيسية'], ['auction.html', 'auction', 'المزاد المباشر'], ['wholesale.html', 'wholesale', 'الجملة'], ['retail.html', 'retail', 'القطاعي']];
+const nav = [['index.html', 'home', 'الرئيسية'], ['auction.html', 'auction', 'المزاد المباشر'], ['traders.html', 'traders', 'التجار'], ['wholesale.html', 'wholesale', 'الجملة'], ['retail.html', 'retail', 'القطاعي']];
 
 document.body.insertAdjacentHTML('afterbegin', `
 ${DEMO ? '<div class="topbar" style="background:#2A1C10;color:#fff">وضع العرض: البيانات تجريبية حتى تُضاف إعدادات Firebase</div>' : ''}
 <div class="topbar">مزاد مباشر • أسعار خاصة للتجار والمحلات • طلبات القطاعي لجميع مناطق المملكة</div>
 <header class="site-header"><div class="wrap">
-  <a class="brand" href="index.html"><img src="mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>رائحة تكتمل بها الفخامة</small></span></a>
+  <a class="brand" href="index.html"><img src="mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>المنصة الدولية لتجارة العود</small></span></a>
   <nav class="main-nav" aria-label="القائمة الرئيسية">${nav.map(([h, k, l]) => `<a href="${h}" class="${page === k ? 'active' : ''}">${k === 'auction' ? '<span class="dot"></span>' : ''}${l}</a>`).join('')}</nav>
   <div class="header-actions">
     <button class="icon-btn" id="cartBtn" aria-label="السلة">${icons.bag}<span class="badge-count hidden" id="cartCount">0</span></button>
@@ -66,12 +66,38 @@ function renderUserArea() {
   if (!u) { el.innerHTML = '<button class="btn btn-gold btn-sm" id="loginBtn">دخول / تسجيل</button>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
   el.innerHTML = `<span style="display:flex;gap:8px;align-items:center">
     ${u.paddle ? `<span class="paddle-chip" title="رقم مزايدتك"><b>${u.paddle}</b>رقمك</span>` : ''}
+    <a class="icon-btn" href="messages.html" aria-label="الرسائل" title="الرسائل"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4V5Z"/></svg></a>
+    ${u.status === 'pending' ? '<span class="pend-chip" title="حسابك قيد المراجعة">بانتظار الاعتماد</span>' : ''}
     ${u.isAdmin ? '<a class="btn btn-line btn-sm" href="admin.html">لوحة التحكم</a>' : ''}
     <button class="btn btn-line btn-sm" id="logoutBtn">خروج</button></span>`;
   el.querySelector('#logoutBtn').onclick = () => signOutUser();
 }
 
 /* ---------- نافذة الدخول ---------- */
+export const COUNTRIES = ['السعودية', 'الإمارات', 'الكويت', 'قطر', 'البحرين', 'عُمان', 'اليمن', 'العراق', 'الأردن', 'مصر', 'الهند', 'كمبوديا', 'إندونيسيا', 'ماليزيا', 'تايلاند', 'فيتنام', 'لاوس', 'بنغلاديش', 'سريلانكا', 'ميانمار', 'بابوا غينيا الجديدة', 'أخرى'];
+const phoneOk = (p) => /^(05\d{8}|\+?\d{9,15})$/.test(String(p || '').replace(/[\s-]/g, ''));
+
+// حقول الهوية التجارية — مشتركة بين التسجيل واستكمال البيانات
+function idFields() {
+  return `<fieldset class="field" style="border:0;padding:0;margin:0"><legend style="margin-bottom:6px">نوع الحساب</legend>
+      <div class="row2"><label class="chip-radio"><input type="radio" name="type" value="individual" checked> فرد — وثيقة العمل الحر</label>
+      <label class="chip-radio"><input type="radio" name="type" value="trader"> تاجر — سجل تجاري</label></div></fieldset>
+    <label class="field"><span class="docLbl">رقم وثيقة العمل الحر</span><input name="docNo" inputmode="numeric" autocomplete="off"></label>
+    <label class="field trOnly hidden">اسم المنشأة<input name="company"></label>
+    <div class="row2"><label class="field">الدولة<select name="country">${COUNTRIES.map((c) => `<option>${c}</option>`).join('')}</select></label>
+    <label class="field">المدينة<input name="city"></label></div>`;
+}
+function bindIdFields(f) {
+  const sync = () => { const t = f.type.value; f.querySelector('.docLbl').textContent = t === 'trader' ? 'رقم السجل التجاري' : 'رقم وثيقة العمل الحر'; f.querySelectorAll('.trOnly').forEach((e) => e.classList.toggle('hidden', t !== 'trader')); };
+  f.querySelectorAll('[name=type]').forEach((r) => (r.onchange = sync)); sync();
+}
+function idInvalid(d) {
+  if (!d.type) return 'اختر نوع الحساب';
+  if (!/^[\w\-\/]{5,20}$/.test(String(d.docNo || '').trim())) return d.type === 'trader' ? 'اكتب رقم السجل التجاري' : 'اكتب رقم وثيقة العمل الحر';
+  if (d.type === 'trader' && !String(d.company || '').trim()) return 'اكتب اسم المنشأة';
+  return '';
+}
+
 export function openAuth(mode = 'in') {
   const o = document.createElement('div'); o.className = 'overlay';
   o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="authT">
@@ -79,17 +105,21 @@ export function openAuth(mode = 'in') {
     <h2 id="authT">حسابك في المعتق</h2>
     <div class="tabs2"><button class="chip" data-m="in">دخول</button><button class="chip" data-m="up">حساب جديد</button></div>
     <form class="form" novalidate>
-      <label class="field up">الاسم<input name="name" autocomplete="name"></label>
-      <label class="field up">رقم الجوال<input name="phone" type="tel" placeholder="05xxxxxxxx" autocomplete="tel"></label>
+      <div class="up form" style="gap:16px">
+        <p class="msg ok" style="margin:0;font-size:14px">التسجيل للأفراد بوثيقة العمل الحر، وللتجار بالسجل التجاري. يُراجَع الحساب ويُعتمد قبل دخول قسم التجار.</p>
+        <label class="field">الاسم<input name="name" autocomplete="name"></label>
+        <label class="field">رقم الجوال<input name="phone" type="tel" placeholder="05xxxxxxxx أو +971…" autocomplete="tel" dir="ltr" style="text-align:right"></label>
+        ${idFields()}
+      </div>
       <label class="field">البريد الإلكتروني<input name="email" type="email" required autocomplete="email"></label>
       <label class="field">كلمة المرور<input name="password" type="password" required minlength="6" autocomplete="current-password"></label>
       <div class="msg err hidden"></div>
       <button class="btn btn-gold" type="submit">دخول</button>
       <button class="btn-link in" type="button" style="background:none;border:0;color:var(--gold-dark);cursor:pointer;font:inherit">نسيت كلمة المرور؟</button>
-      <p class="muted up" style="margin:0;font-size:13px">عند التسجيل يُخصص لك رقم مزايدة دائم.</p>
     </form></div>`;
   document.body.appendChild(o);
-  const f = o.querySelector('form'), err = o.querySelector('.msg'), sub = f.querySelector('[type=submit]');
+  const f = o.querySelector('form'), err = o.querySelector('.msg.err'), sub = f.querySelector('[type=submit]');
+  bindIdFields(f);
   const set = (m) => { mode = m; o.querySelectorAll('.tabs2 .chip').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
     o.querySelectorAll('.up').forEach((e) => e.classList.toggle('hidden', m !== 'up')); o.querySelectorAll('.in').forEach((e) => e.classList.toggle('hidden', m !== 'in'));
     sub.textContent = m === 'up' ? 'إنشاء الحساب' : 'دخول'; };
@@ -101,13 +131,36 @@ export function openAuth(mode = 'in') {
   f.onsubmit = async (e) => {
     e.preventDefault(); err.classList.add('hidden');
     const d = Object.fromEntries(new FormData(f));
-    if (!d.email || !d.password || d.password.length < 6 || (mode === 'up' && (!d.name || !/^05\d{8}$/.test(d.phone)))) {
-      err.textContent = mode === 'up' ? 'أكمل كل الحقول (الجوال بصيغة 05xxxxxxxx وكلمة مرور 6 أحرف على الأقل)' : 'اكتب البريد وكلمة المرور'; err.classList.remove('hidden'); return;
-    }
+    let bad = !d.email || !d.password || d.password.length < 6 ? 'اكتب البريد وكلمة مرور من 6 أحرف على الأقل' : '';
+    if (!bad && mode === 'up') bad = !d.name ? 'اكتب الاسم' : !phoneOk(d.phone) ? 'رقم الجوال غير صحيح' : idInvalid(d);
+    if (bad) { err.textContent = bad; err.classList.remove('hidden'); return; }
     sub.disabled = true;
-    try { mode === 'up' ? await signUp(d) : await signIn(d.email, d.password); close(); toast(mode === 'up' ? 'أهلاً بك في المعتق' : 'تم الدخول'); }
-    catch (x) { err.textContent = authMsg(x); err.classList.remove('hidden'); }
+    try {
+      if (mode === 'up') { d.phone = d.phone.replace(/[\s-]/g, ''); d.docNo = d.docNo.trim(); await signUp(d); close(); toast('تم التسجيل — حسابك بانتظار الاعتماد'); }
+      else { await signIn(d.email, d.password); close(); toast('تم الدخول'); }
+    } catch (x) { err.textContent = authMsg(x); err.classList.remove('hidden'); }
     finally { sub.disabled = false; }
+  };
+}
+
+// استكمال بيانات الأعضاء القدامى (قبل اشتراط الوثيقة)
+var askedProfile = false;
+export function openCompleteProfile() {
+  if (!currentUser || document.querySelector('.overlay.prof')) return;
+  const o = document.createElement('div'); o.className = 'overlay prof';
+  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pfT">
+    <button class="icon-btn close" aria-label="إغلاق">${icons.x}</button>
+    <h2 id="pfT">استكمل بيانات حسابك</h2>
+    <p class="muted" style="margin:0 0 14px">العضوية في المنصة للأفراد بوثيقة العمل الحر وللتجار بالسجل التجاري.</p>
+    <form class="form" novalidate>${idFields()}<div class="msg err hidden"></div><button class="btn btn-gold" type="submit">حفظ وإرسال للاعتماد</button></form></div>`;
+  document.body.appendChild(o);
+  const f = o.querySelector('form'), err = o.querySelector('.msg.err'); bindIdFields(f);
+  o.querySelector('.close').onclick = () => o.remove();
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const d = Object.fromEntries(new FormData(f)); const bad = idInvalid(d);
+    if (bad) { err.textContent = bad; err.classList.remove('hidden'); return; }
+    try { await completeProfile(currentUser.uid, { type: d.type, docNo: d.docNo.trim(), company: d.company || '', country: d.country, city: d.city || '' }); o.remove(); toast('أُرسلت بياناتك للاعتماد'); }
+    catch (x) { err.textContent = 'تعذّر الحفظ، حاول مرة أخرى'; err.classList.remove('hidden'); console.error(x); }
   };
 }
 function authMsg(x) {

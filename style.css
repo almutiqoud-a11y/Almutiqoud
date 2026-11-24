@@ -51,7 +51,7 @@ h1,h2,h3{font-family:var(--fh);line-height:1.25;margin:0}
 .pill{align-self:flex-start;border:1px solid var(--gold);color:var(--gold-dark);border-radius:999px;padding:6px 16px;font-size:14px}
 .hero h1{font-size:54px}
 .hero-media{flex:0 1 460px;min-width:0}
-.hero-media img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:24px;margin:0 auto}
+.hero-media img{width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;border-radius:24px;margin:0 auto}
 .btn-row{display:flex;flex-wrap:wrap;gap:14px}
 .next-auction{align-self:flex-start;border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;background:#fff}
 .next-auction .t{font-family:var(--fh);font-size:17px;color:var(--gold-dark)}
@@ -270,7 +270,7 @@ tbody tr:nth-child(even){background:var(--soft)}
 .media-grid>img{flex:1 1 260px;min-width:0;max-height:420px;object-fit:cover;border-radius:14px}
 .media-grid>div{flex:1 1 300px;min-width:0}
 .vid{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000}
-.vid.tall{aspect-ratio:9/16;max-width:320px;margin:0 auto}
+.vid.tall{aspect-ratio:9/16;width:320px;max-width:100%;margin:0 auto}
 .vid iframe,.vid video{position:absolute;inset:0;width:100%;height:100%;border:0}
 
 /* انتهاء المزاد على الشاشة */
@@ -307,3 +307,9 @@ tbody tr:nth-child(even){background:var(--soft)}
 .seat.lead{transform:translateY(-9%) scale(1.06)}
 @keyframes seatup{0%{transform:translateY(6%) scale(1)}50%{transform:translateY(-14%) scale(1.08)}100%{transform:translateY(-9%) scale(1.06)}}
 .seat .tag{margin-bottom:2px}
+
+/* التسجيل وقسم التجار */
+.chip-radio{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:12px;padding:10px 12px;font-size:14px;cursor:pointer}
+.chip-radio:has(input:checked){border-color:var(--gold);background:#FBF3E2}
+.chip-radio input{accent-color:var(--gold);width:18px;height:18px}
+.pend-chip{background:#FBF3E2;border:1px solid var(--gold);color:var(--gold-dark);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;white-space:nowrap}

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<title>المعتق للعود — مزاد • جملة • قطاعي</title>
+<title>المعتق للعود — المنصة الدولية لتجارة العود</title>
 <meta name="description" content="المعتق للعود: مزاد مباشر للعود، وبيع بالجملة للمحلات، وبالقطاعي للأفراد.">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,14 +9,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body data-page="home">
 <main>
   <section class="hero"><div class="wrap">
     <div class="hero-text">
       <span class="pill">مزاد • جملة • قطاعي — في منصة واحدة</span>
-      <h1>رائحة تكتمل<br><span class="gold">بها الفخامة</span></h1>
+      <h1>المنصة الدولية<br><span class="gold">لتجارة العود</span></h1>
       <div class="btn-row">
         <a class="btn btn-gold" href="auction.html">ادخل قاعة المزاد</a>
         <a class="btn btn-line" href="retail.html">تسوّق القطاعي</a>
@@ -30,7 +30,7 @@
         <div class="cd" id="cd"><span id="cdD">00<small>يوم</small></span><span id="cdH">00<small>ساعة</small></span><span id="cdM">00<small>دقيقة</small></span><span id="cdS">00<small>ثانية</small></span></div>
       </div>
     </div>
-    <div class="hero-media"><img src="brand_square.jpg" alt="شعار المعتق للعود الرسمي" width="595" height="596"></div>
+    <div class="hero-media"><img src="hero-oud.jpg" alt="المعتق للعود — عود معتق" width="1000" height="1000"></div>
   </div></section>
 
   <section class="section"><div class="wrap">
@@ -38,7 +38,7 @@
     <div class="gallery">
       <figure class="wide"><img src="kiosk.jpg" alt="نقطة بيع المعتق للعود" loading="lazy"><figcaption>نقطة بيع المعتق</figcaption></figure>
       <figure><img src="mabkhara.jpg" alt="مبخرة المعتق" loading="lazy"><figcaption>مبخرة المعتق</figcaption></figure>
-      <figure><img src="oudpile.jpg" alt="عود المعتق" loading="lazy"><figcaption>عود معتق أصيل</figcaption></figure>
+      <figure><img src="mabkhara-stand.jpg" alt="ركن العود والبخور من المعتق" loading="lazy" style="object-position:center 35%"><figcaption>أجود أنواع العود والبخور</figcaption></figure>
     </div>
   </div></section>
 
@@ -95,10 +95,10 @@ import { fmt, esc, addToCart } from './layout.js';
 let startAt = null;
 watchAuction((a) => {
   if (!a) { document.getElementById('naDate').textContent = 'يُعلن قريباً'; return; }
-  document.getElementById('naTitle').textContent = a.status === 'live' ? 'المزاد مباشر الآن' : (a.title || 'المزاد القادم');
+  document.getElementById('naTitle').textContent = a.status === 'live' ? 'المزاد مباشر الآن' : (a.title ? 'مزاد ' + a.title : 'المزاد القادم');
   document.getElementById('naLink').textContent = a.status === 'live' ? 'ادخل الآن ←' : 'احجز رقم مزايدتك ←';
   startAt = a.status === 'live' ? null : a.startAt;
-  document.getElementById('naDate').textContent = a.status === 'live' ? 'القطع تُعرض الآن' : a.startAt ? new Date(a.startAt).toLocaleString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }) : '—';
+  document.getElementById('naDate').textContent = a.status === 'live' ? 'المنتجات تُعرض الآن' : a.startAt ? new Date(a.startAt).toLocaleString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }) : '—';
   document.getElementById('cd').classList.toggle('hidden', !startAt);
 });
 const p2 = (n) => String(n).padStart(2, '0');

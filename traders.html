@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>قسم التجار — المعتق للعود</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="mark_gold.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=10">
+<style>
+.tr-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}
+.dir-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.dir-card h3{font-size:21px}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;background:var(--raised);color:var(--gold-dark);border:1px solid var(--line2)}
+.badge.tr{background:var(--gold);color:var(--on-gold);border-color:var(--gold)}
+.dir-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+.lst .imgs{position:relative;aspect-ratio:4/3;background:var(--raised) url(mark_gold.png) center/56px auto no-repeat}
+.lst .imgs>img{width:100%;height:100%;object-fit:cover}
+.thumbs{display:flex;gap:6px;padding:8px 18px 0}
+.thumbs button{width:52px;height:52px;border-radius:8px;overflow:hidden;border:2px solid transparent;padding:0;cursor:pointer;background:var(--raised)}
+.thumbs button[aria-pressed=true]{border-color:var(--gold)}
+.thumbs img{width:100%;height:100%;object-fit:cover}
+.pick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pick-grid .slot{aspect-ratio:1;border:1px dashed var(--line2);border-radius:10px;overflow:hidden;position:relative;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.pick-grid .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pick-grid .slot button{position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;z-index:1}
+.gate{max-width:640px;margin:40px auto;text-align:center}
+.vid{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;margin:8px 18px 0}
+.vid.tall{aspect-ratio:9/16;width:220px;max-width:calc(100% - 36px);margin:8px auto 0}
+.vid iframe,.vid video{position:absolute;inset:0;width:100%;height:100%;border:0}
+</style>
+</head>
+<body data-page="traders">
+<main class="wrap" style="padding-top:28px">
+  <h1 style="font-size:40px">قسم التجار</h1>
+  <p class="muted" style="margin:6px 0 0">دليل تجار العود حول العالم، ومنتجات الأعضاء، والمراسلة المباشرة بين البائع والمشتري.</p>
+
+  <div id="gate" class="panel gate hidden"></div>
+
+  <div id="app" class="hidden">
+    <div class="tr-tabs" role="tablist">
+      <button class="chip" data-t="dir" aria-pressed="true">دليل التجار</button>
+      <button class="chip" data-t="lst">منتجات الأعضاء</button>
+      <button class="chip" data-t="mine">أضف منتجك</button>
+      <a class="chip" href="messages.html" style="display:inline-flex;align-items:center;text-decoration:none">الرسائل والأرشيف</a>
+    </div>
+
+    <section data-p="dir">
+      <div class="row2" style="max-width:640px;margin-bottom:18px">
+        <label class="field">بحث<input type="search" id="dq" placeholder="اسم التاجر أو المنشأة أو المدينة"></label>
+        <label class="field">الدولة<select id="dc"><option value="">كل الدول</option></select></label>
+      </div>
+      <div class="grid g4" id="dirGrid"></div>
+      <p class="muted hidden" id="dirEmpty">لا يوجد تجار مطابقون.</p>
+    </section>
+
+    <section data-p="lst" class="hidden">
+      <div class="row2" style="max-width:640px;margin-bottom:18px">
+        <label class="field">بحث<input type="search" id="lq" placeholder="عود، دهن، بخور…"></label>
+        <label class="field">الدولة<select id="lc"><option value="">كل الدول</option></select></label>
+      </div>
+      <div class="grid g4" id="lstGrid"></div>
+      <p class="muted hidden" id="lstEmpty">لا توجد منتجات بعد.</p>
+    </section>
+
+    <section data-p="mine" class="hidden">
+      <div class="layout">
+        <main>
+          <h2 style="font-size:26px;color:var(--gold-dark);margin-bottom:14px">منتجاتي</h2>
+          <div class="grid g4" id="mineGrid"></div>
+          <p class="muted hidden" id="mineEmpty">لم تضف منتجات بعد.</p>
+        </main>
+        <aside>
+          <form class="panel gold form" id="lf" novalidate>
+            <h2 style="margin:0">إضافة / تعديل منتج</h2>
+            <input type="hidden" name="id">
+            <label class="field">اسم المنتج<input name="name" required></label>
+            <label class="field">الوصف<textarea name="desc" rows="3" placeholder="النوع، المنشأ، الدرجة، الكمية المتاحة…"></textarea></label>
+            <div class="row2">
+              <label class="field">السعر (ريال)<input name="price" type="number" min="0" step="0.01"></label>
+              <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للجرام</option><option>للكيلو</option><option>للقطعة</option><option>للعلبة</option></select></label>
+            </div>
+            <div class="field">الصور (حتى 4)
+              <div class="pick-grid" id="slots"></div>
+              <label class="btn btn-line btn-sm" style="margin-top:8px;align-self:flex-start">اختر صوراً<input type="file" accept="image/*" multiple id="pics" class="hidden"></label>
+            </div>
+            <label class="field">فيديو قصير (رابط يوتيوب أو شورتس أو mp4)<input name="video" type="url" dir="ltr" style="text-align:left" placeholder="https://youtube.com/shorts/…"></label>
+            <div class="msg hidden" id="lfMsg"></div>
+            <button class="btn btn-gold" type="submit">حفظ المنتج</button>
+            <button class="btn btn-line btn-sm hidden" type="button" id="lfReset">إلغاء التعديل</button>
+          </form>
+        </aside>
+      </div>
+    </section>
+  </div>
+</main>
+<script type="module">
+import { currentUser, onCurrentUser, openAuth, openCompleteProfile, esc, fmt, toast, shrinkImage, COUNTRIES } from './layout.js';
+import { getDirectory, getListings, saveListing, deleteListing, openChat } from './db.js';
+const $ = (id) => document.getElementById(id);
+var started = false, dir = [], lst = [], imgs = [];
+
+onCurrentUser((u) => {
+  const gate = $('gate'), app = $('app');
+  const ok = u && (u.isAdmin || u.status === 'approved');
+  gate.classList.toggle('hidden', !!ok); app.classList.toggle('hidden', !ok);
+  if (!u) gate.innerHTML = `<h2>قسم خاص بالأعضاء المعتمدين</h2><p class="muted">الدخول للأفراد بوثيقة العمل الحر، وللتجار بالسجل التجاري.</p><button class="btn btn-gold" id="gIn">دخول / تسجيل</button>`;
+  else if (!u.type && !u.isAdmin) gate.innerHTML = `<h2>استكمل بيانات حسابك</h2><p class="muted">أضف رقم وثيقة العمل الحر أو السجل التجاري ليُراجَع حسابك.</p><button class="btn btn-gold" id="gPf">استكمال البيانات</button>`;
+  else if (!ok) gate.innerHTML = `<h2>حسابك قيد المراجعة</h2><p class="muted">نراجع ${u.type === 'trader' ? 'السجل التجاري' : 'وثيقة العمل الحر'} رقم <b dir="ltr">${esc(u.docNo)}</b>، وسيُفتح لك القسم فور الاعتماد.</p>`;
+  $('gIn')?.addEventListener('click', () => openAuth('up'));
+  $('gPf')?.addEventListener('click', openCompleteProfile);
+  if (ok && !started) { started = true; load(); }
+});
+
+document.querySelector('.tr-tabs').onclick = (e) => {
+  const b = e.target.closest('button[data-t]'); if (!b) return;
+  document.querySelectorAll('.tr-tabs button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  document.querySelectorAll('section[data-p]').forEach((s) => s.classList.toggle('hidden', s.dataset.p !== b.dataset.t));
+};
+
+const opts = COUNTRIES.filter((c) => c !== 'أخرى').map((c) => `<option>${c}</option>`).join('');
+$('dc').insertAdjacentHTML('beforeend', opts); $('lc').insertAdjacentHTML('beforeend', opts);
+const waNum = (p) => { p = String(p || '').replace(/[^\d+]/g, ''); if (p.startsWith('+')) return p.slice(1); if (p.startsWith('00')) return p.slice(2); if (p.startsWith('05')) return '966' + p.slice(1); return p; };
+
+async function load() {
+  [dir, lst] = await Promise.all([getDirectory(), getListings()]);
+  drawDir(); drawLst(); drawMine();
+}
+$('dq').oninput = drawDir; $('dc').onchange = drawDir; $('lq').oninput = drawLst; $('lc').onchange = drawLst;
+
+function drawDir() {
+  const q = $('dq').value.trim(), c = $('dc').value;
+  const list = dir.filter((d) => (!c || d.country === c) && (!q || [d.name, d.company, d.city].join(' ').includes(q)))
+    .sort((a, b) => (a.type === 'trader' ? 0 : 1) - (b.type === 'trader' ? 0 : 1) || String(a.company || a.name).localeCompare(String(b.company || b.name), 'ar'));
+  $('dirEmpty').classList.toggle('hidden', !!list.length);
+  $('dirGrid').innerHTML = list.map((d) => `<article class="dir-card">
+      <span class="badge ${d.type === 'trader' ? 'tr' : ''}" style="align-self:flex-start">${d.type === 'trader' ? 'تاجر' : 'فرد'}</span>
+      <h3>${esc(d.company || d.name)}</h3>
+      ${d.company ? `<span class="muted" style="font-size:14px">${esc(d.name)}</span>` : ''}
+      <span>${esc(d.country || '')}${d.city ? ' • ' + esc(d.city) : ''}</span>
+      <a href="tel:${esc(String(d.phone || '').replace(/\s/g, ''))}" dir="ltr" style="text-align:right;font-weight:600">${esc(d.phone || '')}</a>
+      <div class="dir-actions">
+        ${d.uid !== currentUser.uid ? `<button class="btn btn-gold btn-sm" data-chat="${esc(d.uid)}">مراسلة</button>` : '<span class="muted" style="font-size:13px">هذا أنت</span>'}
+        ${d.phone ? `<a class="btn btn-line btn-sm" href="https://wa.me/${waNum(d.phone)}" target="_blank" rel="noopener">واتساب</a>` : ''}
+      </div></article>`).join('');
+}
+$('dirGrid').onclick = (e) => { const b = e.target.closest('[data-chat]'); if (!b) return; const d = dir.find((x) => x.uid === b.dataset.chat); startChat({ uid: d.uid, name: d.name, company: d.company }); };
+
+function videoHTML(u) {
+  if (!u) return '';
+  const m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([\w-]{11})/);
+  if (m) return `<div class="vid ${/shorts\//.test(u) ? 'tall' : ''}"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?playsinline=1&rel=0" title="فيديو المنتج" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`;
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(u)) return `<div class="vid"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
+  return `<a class="btn btn-line btn-sm" style="margin:8px 18px 0" href="${esc(u)}" target="_blank" rel="noopener">شاهد الفيديو</a>`;
+}
+function card(p, mine) {
+  const im = (p.images || []).slice(0, 4);
+  return `<article class="product lst" data-id="${esc(p.id)}">
+    <div class="imgs">${im[0] ? `<img src="${esc(im[0])}" alt="${esc(p.name)}" loading="lazy">` : ''}</div>
+    ${im.length > 1 ? `<div class="thumbs">${im.map((s, i) => `<button type="button" aria-label="الصورة ${i + 1}" aria-pressed="${i === 0}" data-i="${i}"><img src="${esc(s)}" alt=""></button>`).join('')}</div>` : ''}
+    ${videoHTML(p.video)}
+    <div class="body">
+      <span class="muted" style="font-size:13px">${esc(p.ownerName || '')} • ${esc(p.country || '')} <span class="badge ${p.ownerType === 'trader' ? 'tr' : ''}">${p.ownerType === 'trader' ? 'تاجر' : 'فرد'}</span></span>
+      <h3>${esc(p.name)}</h3>
+      ${p.desc ? `<p class="muted" style="margin:0;font-size:14px;white-space:pre-line">${esc(p.desc)}</p>` : ''}
+      <div class="price"><b>${p.price != null ? fmt(p.price) + ' ريال' : 'السعر عند التواصل'}</b><span class="muted">${esc(p.unit || '')}</span></div>
+      ${mine ? `<div style="display:flex;gap:8px;margin-top:auto"><button class="btn btn-line btn-sm" data-edit="${esc(p.id)}">تعديل</button><button class="btn btn-line btn-sm" data-del="${esc(p.id)}">حذف</button></div>`
+        : `<button class="btn btn-gold btn-sm" data-chat="${esc(p.owner)}" data-topic="${esc(p.name)}">تواصل مع البائع</button>`}
+    </div></article>`;
+}
+function drawLst() {
+  const q = $('lq').value.trim(), c = $('lc').value;
+  const list = lst.filter((p) => p.owner !== currentUser.uid && (!c || p.country === c) && (!q || [p.name, p.desc, p.ownerName].join(' ').includes(q)));
+  $('lstEmpty').classList.toggle('hidden', !!list.length);
+  $('lstGrid').innerHTML = list.map((p) => card(p, false)).join('');
+}
+function drawMine() {
+  const list = lst.filter((p) => p.owner === currentUser.uid);
+  $('mineEmpty').classList.toggle('hidden', !!list.length);
+  $('mineGrid').innerHTML = list.map((p) => card(p, true)).join('');
+}
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('.thumbs button');
+  if (t) { const a = t.closest('.lst'); const p = lst.find((x) => x.id === a.dataset.id); a.querySelector('.imgs img').src = p.images[+t.dataset.i]; a.querySelectorAll('.thumbs button').forEach((x) => x.setAttribute('aria-pressed', x === t)); return; }
+  const c = e.target.closest('#lstGrid [data-chat]');
+  if (c) { const p = lst.find((x) => x.owner === c.dataset.chat); startChat({ uid: p.owner, name: p.ownerName, company: '' }, c.dataset.topic); return; }
+  const ed = e.target.closest('[data-edit]');
+  if (ed) { const p = lst.find((x) => x.id === ed.dataset.edit); const f = $('lf'); f.id.value = p.id; f.name.value = p.name; f.desc.value = p.desc || ''; f.price.value = p.price ?? ''; f.unit.value = p.unit || 'للتولة'; f.video.value = p.video || ''; imgs = (p.images || []).slice(); drawSlots(); $('lfReset').classList.remove('hidden'); f.scrollIntoView({ behavior: 'smooth' }); return; }
+  const dl = e.target.closest('[data-del]');
+  if (dl) { if (!dl.dataset.ok) { dl.dataset.ok = 1; dl.textContent = 'تأكيد الحذف'; return; } await deleteListing(dl.dataset.del); lst = lst.filter((x) => x.id !== dl.dataset.del); drawMine(); toast('حُذف المنتج'); }
+});
+
+async function startChat(other, topic = '') {
+  try { const id = await openChat(currentUser, other, topic); location.href = 'messages.html?c=' + encodeURIComponent(id); }
+  catch (x) { toast('تعذّر فتح المحادثة'); console.error(x); }
+}
+
+// نموذج المنتج: 4 صور + فيديو
+function drawSlots() {
+  $('slots').innerHTML = [0, 1, 2, 3].map((i) => imgs[i] ? `<div class="slot"><img src="${imgs[i]}" alt="صورة ${i + 1}"><button type="button" aria-label="حذف الصورة" data-rm="${i}">×</button></div>` : `<div class="slot">صورة ${i + 1}</div>`).join('');
+}
+drawSlots();
+$('slots').onclick = (e) => { const b = e.target.closest('[data-rm]'); if (b) { imgs.splice(+b.dataset.rm, 1); drawSlots(); } };
+$('pics').onchange = async (e) => {
+  const files = [...e.target.files].slice(0, 4 - imgs.length); e.target.value = '';
+  if (!files.length) { toast('الحد 4 صور'); return; }
+  for (const f of files) { try { imgs.push(await shrinkImage(f, 800, 0.62)); } catch { toast('تعذّر قراءة صورة'); } }
+  drawSlots();
+};
+$('lfReset').onclick = () => { $('lf').reset(); $('lf').id.value = ''; imgs = []; drawSlots(); $('lfReset').classList.add('hidden'); };
+$('lf').onsubmit = async (e) => {
+  e.preventDefault(); const f = e.target, m = $('lfMsg');
+  const d = { name: f.name.value.trim(), desc: f.desc.value.trim(), price: f.price.value === '' ? null : +f.price.value, unit: f.unit.value, video: f.video.value.trim(), images: imgs.slice(0, 4) };
+  if (!d.name) { m.className = 'msg err'; m.textContent = 'اكتب اسم المنتج'; return; }
+  if (!d.images.length) { m.className = 'msg err'; m.textContent = 'أضف صورة واحدة على الأقل'; return; }
+  f.querySelector('[type=submit]').disabled = true;
+  try { await saveListing(currentUser, d, f.id.value || null); lst = await getListings(); drawMine(); drawLst(); $('lfReset').click(); m.className = 'msg ok'; m.textContent = 'حُفظ المنتج وظهر في «منتجات الأعضاء».'; }
+  catch (x) { m.className = 'msg err'; m.textContent = 'تعذّر الحفظ — قد يكون حجم الصور كبيراً، جرّب صوراً أقل.'; console.error(x); }
+  finally { f.querySelector('[type=submit]').disabled = false; }
+};
+</script>
+</body>
+</html>

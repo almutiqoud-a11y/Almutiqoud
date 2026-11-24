@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body data-page="auction">
 <div class="wrap" style="padding-top:24px">
@@ -45,8 +45,8 @@
   <div class="layout" style="margin-top:24px">
     <main>
       <div class="panel hidden" id="media" style="margin-bottom:20px">
-        <h2 style="margin-bottom:14px">صور وفيديو القطعة</h2>
-        <div class="media-grid"><img id="lotImg" class="hidden" alt="صورة القطعة"><div id="lotVid" class="hidden"></div></div>
+        <h2 style="margin-bottom:14px">صور وفيديو المنتج</h2>
+        <div class="media-grid"><img id="lotImg" class="hidden" alt="صورة المنتج"><div id="lotVid" class="hidden"></div></div>
       </div>
       <div class="panel"><div class="specs">
         <div><small>المنشأ</small><b id="sOrigin">—</b></div>
@@ -54,7 +54,7 @@
         <div><small>مدة التعتيق</small><b id="sAge">—</b></div>
         <div><small>عدد المزايدات</small><b id="sBids">—</b></div>
       </div></div>
-      <h2 style="font-size:24px;color:var(--gold-dark);margin:28px 0 14px">القطع التالية</h2>
+      <h2 style="font-size:24px;color:var(--gold-dark);margin:28px 0 14px">المنتجات التالية</h2>
       <div class="queue" id="queue"></div>
       <p class="muted" style="font-size:13px;margin-top:18px">كل مزايدة ملزمة. أي مزايدة في آخر 30 ثانية تمدّد الوقت حتى يتسنى للجميع الرد. <a href="terms.html">شروط المزاد</a></p>
     </main>
@@ -76,7 +76,7 @@ const SEATS = [
   { l: 44.63, t: 48.57, w: 4.98, f: 1 }, { l: 66.73, t: 47.49, w: 4.88, f: 1 }, { l: 25.78, t: 49.45, w: 4.27, f: 1 }, { l: 10.47, t: 42.92, w: 4.98, f: 1 }, { l: 85.19, t: 42.89, w: 3.46 }, { l: 22.61, t: 42.13, w: 2.44 }, { l: 64.65, t: 40.08, w: 2.03 }, { l: 80.26, t: 43.49, w: 2.64 }, { l: 19.45, t: 45.14, w: 2.44 }, { l: 73.65, t: 42.98, w: 2.03 }, { l: 32.84, t: 43.75, w: 1.83 }, { l: 9.63, t: 45.13, w: 2.24 }
 ];
 const ar = (n) => String(n);
-var present = [], myWins = [], unWins = null, SET = { ...PAYMENT, ...CONTACT };
+var auTitle = '', present = [], myWins = [], unWins = null, SET = { ...PAYMENT, ...CONTACT };
 watchSettings((s) => { SET = s; });
 let lot = null, bids = [], inc = AUCTION.increments[0], lotTotal = 0, unLot = null, unBids = null, curId = null, lastLeader = null;
 
@@ -86,7 +86,7 @@ $('incs').onclick = (e) => { const b = e.target.closest('.inc'); if (b) { inc = 
 paintIncs();
 
 watchAuction(async (a) => {
-  lotTotal = a?.lotTotal || 0;
+  lotTotal = a?.lotTotal || 0; auTitle = a?.title || '';
   const id = a?.currentLotId || null;
   if (id === curId) return;
   curId = id; unLot && unLot(); unBids && unBids();
@@ -101,7 +101,7 @@ watchAuction(async (a) => {
 
 watchLots((ls) => {
   const q = ls.filter((l) => l.status === 'queued').slice(0, 6);
-  $('queue').innerHTML = q.length ? q.map((l) => `<div class="q"><div class="thumb">${l.image ? `<img src="${esc(l.image)}" alt="">` : ''}</div><div><div class="muted" style="font-size:12px">القطعة ${esc(l.no)}</div><b style="font-size:15px">${esc(l.name)}</b><div class="gold" style="font-size:13px">يبدأ من ${fmt(l.openPrice)}${l.openPrice != null ? ' ريال' : ''}</div></div></div>`).join('') : '<p class="muted">لا توجد قطع أخرى في هذا المزاد.</p>';
+  $('queue').innerHTML = q.length ? q.map((l) => `<div class="q"><div class="thumb">${l.image ? `<img src="${esc(l.image)}" alt="">` : ''}</div><div><div class="muted" style="font-size:12px">المنتج ${esc(l.no)}</div><b style="font-size:15px">${esc(l.name)}</b><div class="gold" style="font-size:13px">يبدأ من ${fmt(l.openPrice)}${l.openPrice != null ? ' ريال' : ''}</div></div></div>`).join('') : '<p class="muted">لا توجد منتجات أخرى في هذا المزاد.</p>';
 });
 
 onCurrentUser(async (u) => {
@@ -134,9 +134,9 @@ function paintPaddles() {
 function videoHTML(u) {
   if (!u) return '';
   const m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([\w-]{11})/);
-  if (m) { const shorts = /shorts\//.test(u); return `<div class="vid ${shorts ? 'tall' : ''}"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?playsinline=1&rel=0" title="فيديو القطعة" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`; }
+  if (m) { const shorts = /shorts\//.test(u); return `<div class="vid ${shorts ? 'tall' : ''}"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?playsinline=1&rel=0" title="فيديو المنتج" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`; }
   if (/\.(mp4|webm|mov)(\?|$)/i.test(u)) return `<div class="vid"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
-  return `<a class="btn btn-line btn-sm" href="${esc(u)}" target="_blank" rel="noopener">شاهد فيديو القطعة</a>`;
+  return `<a class="btn btn-line btn-sm" href="${esc(u)}" target="_blank" rel="noopener">شاهد فيديو المنتج</a>`;
 }
 var mediaKey = '';
 function paintMedia() {
@@ -159,7 +159,7 @@ function paint() {
   }
   const price = lot.currentPrice ?? lot.openPrice;
   $('lotName').textContent = lot.name;
-  $('lotOf').textContent = `القطعة ${lot.no}${lotTotal ? ' من ' + lotTotal : ''}`;
+  $('lotOf').textContent = `${auTitle ? 'التاجر: ' + auTitle + ' • ' : ''}المنتج ${lot.no}${lotTotal ? ' من ' + lotTotal : ''}`;
   $('price').textContent = $('price2').textContent = fmt(price);
   $('leader1').textContent = $('leader2').textContent = lot.leaderPaddle ?? '—';
   $('open').textContent = fmt(lot.openPrice);
@@ -180,7 +180,7 @@ function paint() {
   if (ended) {
     if (!closed) $('endLine').textContent = 'جارٍ اعتماد النتيجة…';
     else if (lot.status === 'sold') $('endLine').innerHTML = `رسا المزاد على المضرب <strong>${esc(lot.leaderPaddle)}</strong> بمبلغ <strong>${fmt(lot.currentPrice)}</strong> ريال`;
-    else $('endLine').textContent = 'لم تُبع هذه القطعة';
+    else $('endLine').textContent = 'لم يُبع هذا المنتج';
     if (!closed && u) { st.textContent = 'بانتظار اعتماد النتيجة'; st.style.color = '#BFAE95'; }
   }
   drawWins();

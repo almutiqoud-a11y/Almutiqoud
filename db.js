@@ -26,7 +26,7 @@ const demoProducts = [
   { id: 'p5', cat: 'mabkhara', name: 'مبخرة المعتق', sub: 'مباخر', unit: 'للقطعة', price: null, image: 'mabkhara.jpg' },
   { id: 'p6', cat: 'oil', name: 'دهن عود كمبودي', sub: 'دهن • كمبوديا', unit: 'للتولة', price: null },
   { id: 'p7', cat: 'bakhoor', name: 'بخور عود مروكي', sub: 'بخور', unit: 'للعلبة', price: null },
-  { id: 'p8', cat: 'oud', name: 'عود ماليزي', sub: 'عود • ماليزيا', unit: 'للجرام', price: null, image: 'oudpile.jpg' },
+  { id: 'p8', cat: 'oud', name: 'عود ماليزي', sub: 'عود • ماليزيا', unit: 'للجرام', price: null, image: 'mabkhara-stand.jpg' },
   { id: 'p9', cat: 'gift', name: 'صندوق هدية المعتق', sub: 'هدايا', unit: 'للصندوق', price: null }
 ];
 const demoWholesale = [
@@ -73,35 +73,54 @@ if (DEMO) setInterval(() => {
 const ms = (t) => (t && t.toMillis ? t.toMillis() : t);
 
 /* ---------------- الحساب ---------------- */
-export async function onUser(cb) {
-  if (DEMO) { demo.subs.add(() => cb(demo.user)); cb(demo.user); return; }
-  const { auth, A, db, F } = await init();
-  A.onAuthStateChanged(auth, async (u) => {
-    if (!u) return cb(null);
-    const snap = await F.getDoc(F.doc(db, 'users', u.uid));
-    const d = snap.exists() ? snap.data() : {};
-    cb({ uid: u.uid, email: u.email, name: d.name || u.displayName || '', phone: d.phone || '', paddle: d.paddle || null, isAdmin: ADMIN_EMAILS.includes(u.email) });
-  });
+let userCb = null, lastAuth = null;
+async function emitUser() {
+  if (!userCb) return;
+  if (DEMO) return userCb(demo.user);
+  const { db, F } = await init(); const u = lastAuth;
+  if (!u) return userCb(null);
+  const snap = await F.getDoc(F.doc(db, 'users', u.uid));
+  const d = snap.exists() ? snap.data() : {};
+  userCb({ uid: u.uid, email: u.email, name: d.name || u.displayName || '', phone: d.phone || '', paddle: d.paddle || null,
+    type: d.type || '', docNo: d.docNo || '', company: d.company || '', country: d.country || '', city: d.city || '',
+    status: d.status || '', isAdmin: ADMIN_EMAILS.includes(u.email) });
 }
+export async function onUser(cb) {
+  userCb = cb;
+  if (DEMO) { demo.subs.add(() => cb(demo.user)); cb(demo.user); return; }
+  const { auth, A } = await init();
+  A.onAuthStateChanged(auth, (u) => { lastAuth = u; emitUser(); });
+}
+export const refreshUser = () => emitUser();
 
-export async function signUp({ name, phone, email, password }) {
-  if (DEMO) { demo.user = { uid: 'me', name, phone, email, paddle: 42, isAdmin: false }; demoEmit(); return demo.user; }
+// التسجيل: الفرد بوثيقة العمل الحر، والتاجر بالسجل التجاري — والحساب «بانتظار الاعتماد» حتى يعتمده المدير
+export async function signUp({ name, phone, email, password, type, docNo, company, country, city }) {
+  const prof = { type, docNo, company: company || '', country: country || 'السعودية', city: city || '', status: 'pending' };
+  if (DEMO) { demo.user = { uid: 'me', name, phone, email, paddle: 42, isAdmin: false, ...prof, status: 'approved' }; demoEmit(); return demo.user; }
   const { auth, A, db, F } = await init();
   const cred = await A.createUserWithEmailAndPassword(auth, email, password);
   await A.updateProfile(cred.user, { displayName: name });
-  // رقم مزايدة تسلسلي فريد
   await F.runTransaction(db, async (tx) => {
     const cRef = F.doc(db, 'counters', 'paddles');
     const c = await tx.get(cRef);
     const next = c.exists() ? c.data().next : 11;
     tx.set(cRef, { next: next + 1 });
-    tx.set(F.doc(db, 'users', cred.user.uid), { name, phone, email, paddle: next, createdAt: F.serverTimestamp() });
+    tx.set(F.doc(db, 'users', cred.user.uid), { name, phone, email, paddle: next, ...prof, createdAt: F.serverTimestamp() });
   });
+  lastAuth = cred.user; await emitUser();
   return cred.user;
 }
 
+// للأعضاء المسجلين قبل اشتراط الوثيقة
+export async function completeProfile(uid, data) {
+  if (DEMO) { Object.assign(demo.user, data, { status: 'approved' }); demoEmit(); return; }
+  const { db, F } = await init();
+  await F.updateDoc(F.doc(db, 'users', uid), { ...data, status: 'pending' });
+  await emitUser();
+}
+
 export async function signIn(email, password) {
-  if (DEMO) { demo.user = { uid: 'me', name: 'زائر', email, paddle: 42, isAdmin: email.startsWith('admin') }; demoEmit(); return; }
+  if (DEMO) { demo.user = { uid: 'me', name: 'زائر', email, paddle: 42, isAdmin: email.startsWith('admin'), type: 'individual', docNo: 'FL-0000', country: 'السعودية', status: 'approved' }; demoEmit(); return; }
   const { auth, A } = await init();
   await A.signInWithEmailAndPassword(auth, email, password);
 }
@@ -268,4 +287,77 @@ export async function saveSettings(data) {
   if (DEMO) return;
   const { db, F } = await init();
   await F.setDoc(F.doc(db, 'settings', 'site'), data, { merge: true });
+}
+
+
+/* ---------------- قسم التجار: الدليل ومنتجات الأعضاء ---------------- */
+const demoDir = [
+  { uid: 'd215', name: 'أبو فهد', company: 'مؤسسة عود الشرق', type: 'trader', country: 'السعودية', city: 'جدة', phone: '0551112223' },
+  { uid: 'd88', name: 'خالد', company: 'دار الكمبودي', type: 'trader', country: 'الإمارات', city: 'دبي', phone: '+971501234567' },
+  { uid: 'd31', name: 'سالم', company: '', type: 'individual', country: 'الكويت', city: 'الكويت', phone: '+96550001111' }
+];
+const demoListings = [
+  { id: 'L1', owner: 'd215', ownerName: 'مؤسسة عود الشرق', ownerType: 'trader', country: 'السعودية', name: 'عود كمبودي معتق — 1 كجم', desc: 'درجة أولى، تعتيق طويل.', price: null, unit: 'للكيلو', images: ['hero-oud.jpg', 'mabkhara.jpg'], video: '', createdAt: Date.now() - 3600e3 },
+  { id: 'L2', owner: 'd88', ownerName: 'دار الكمبودي', ownerType: 'trader', country: 'الإمارات', name: 'دهن عود هندي', desc: 'بالتولة، جملة وقطاعي.', price: null, unit: 'للتولة', images: ['mabkhara-stand.jpg'], video: '', createdAt: Date.now() - 7200e3 }
+];
+export async function getDirectory() {
+  if (DEMO) return demoDir;
+  const { db, F } = await init();
+  const s = await F.getDocs(F.collection(db, 'directory'));
+  return s.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+export async function getListings() {
+  if (DEMO) return demoListings.slice().sort((a, b) => b.createdAt - a.createdAt);
+  const { db, F } = await init();
+  const s = await F.getDocs(F.collection(db, 'listings'));
+  return s.docs.map((d) => ({ id: d.id, ...d.data(), createdAt: ms(d.data().createdAt) })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+export async function saveListing(user, data, id) {
+  const base = { ...data, owner: user.uid, ownerName: user.company || user.name, ownerType: user.type, country: user.country || '' };
+  if (DEMO) { if (id) Object.assign(demoListings.find((x) => x.id === id), base); else demoListings.push({ ...base, id: 'L' + Date.now(), createdAt: Date.now() }); return; }
+  const { db, F } = await init();
+  if (id) await F.updateDoc(F.doc(db, 'listings', id), base);
+  else await F.addDoc(F.collection(db, 'listings'), { ...base, createdAt: F.serverTimestamp() });
+}
+export async function deleteListing(id) {
+  if (DEMO) { const i = demoListings.findIndex((x) => x.id === id); if (i > -1) demoListings.splice(i, 1); return; }
+  const { db, F } = await init();
+  await F.deleteDoc(F.doc(db, 'listings', id));
+}
+
+/* ---------------- المراسلة والأرشيف ---------------- */
+// كل محادثة بين عضوين لها معرّف ثابت؛ والرسائل لا تُعدَّل ولا تُحذف لتبقى أرشيفاً
+const demoChats = {}, demoMsgs = {};
+const chatId = (a, b) => [a, b].sort().join('_');
+export async function openChat(me, other, topic = '') {
+  const id = chatId(me.uid, other.uid);
+  const data = { members: [me.uid, other.uid].sort(), names: { [me.uid]: me.company || me.name, [other.uid]: other.company || other.name }, topic };
+  if (DEMO) { demoChats[id] = demoChats[id] || { id, ...data, lastText: '', updatedAt: Date.now() }; return id; }
+  const { db, F } = await init();
+  const ref = F.doc(db, 'chats', id);
+  const s = await F.getDoc(ref).catch(() => null);
+  if (!s || !s.exists()) await F.setDoc(ref, { ...data, lastText: '', updatedAt: Date.now() });
+  else if (topic) await F.updateDoc(ref, { topic });
+  return id;
+}
+export async function watchChats(uid, cb) {
+  if (DEMO) { const f = () => cb(Object.values(demoChats).sort((a, b) => b.updatedAt - a.updatedAt)); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+  const { db, F } = await init();
+  return F.onSnapshot(F.query(F.collection(db, 'chats'), F.where('members', 'array-contains', uid)), (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))), () => cb([]));
+}
+export async function watchAllChats(cb) {
+  const { db, F } = await init();
+  return F.onSnapshot(F.collection(db, 'chats'), (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))));
+}
+export async function watchMessages(id, cb) {
+  if (DEMO) { const f = () => cb((demoMsgs[id] || []).slice()); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+  const { db, F } = await init();
+  return F.onSnapshot(F.query(F.collection(db, 'chats', id, 'messages'), F.orderBy('at')), (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))));
+}
+export async function sendMessage(id, user, text) {
+  text = String(text).trim().slice(0, 2000); if (!text) return;
+  if (DEMO) { (demoMsgs[id] = demoMsgs[id] || []).push({ from: user.uid, text, at: Date.now() }); Object.assign(demoChats[id], { lastText: text, updatedAt: Date.now() }); demoEmit(); return; }
+  const { db, F } = await init();
+  await F.addDoc(F.collection(db, 'chats', id, 'messages'), { from: user.uid, text, at: Date.now() });
+  await F.updateDoc(F.doc(db, 'chats', id), { lastText: text.slice(0, 120), lastFrom: user.uid, updatedAt: Date.now() });
 }

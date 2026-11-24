@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>الرسائل والأرشيف — المعتق للعود</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="mark_gold.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=10">
+<style>
+.chat-wrap{display:flex;flex-wrap:wrap;gap:20px;align-items:stretch;margin-top:20px}
+.chat-list{flex:1 1 280px;max-width:360px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.chat-list input{margin:12px;height:44px;border-radius:10px;border:1px solid var(--line2);padding:0 12px;font:15px var(--fb)}
+.chat-item{display:block;width:100%;text-align:right;background:none;border:0;border-top:1px solid var(--line);padding:14px 16px;cursor:pointer;font:inherit;color:inherit}
+.chat-item[aria-current=true]{background:#FBF3E2}
+.chat-item b{display:block}
+.chat-item small{color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thread{flex:999 1 420px;min-width:0;background:#fff;border:1px solid var(--line);border-radius:18px;display:flex;flex-direction:column;min-height:520px}
+.thread header{padding:14px 18px;border-bottom:1px solid var(--line)}
+.thread header b{font-family:var(--fh);font-size:22px;color:var(--gold-dark)}
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;max-height:60vh}
+.bub{max-width:78%;padding:10px 14px;border-radius:14px;background:var(--soft);border:1px solid var(--line);white-space:pre-wrap;word-break:break-word}
+.bub.me{align-self:flex-start;background:#FBF3E2;border-color:var(--gold)}
+.bub.them{align-self:flex-end}
+.bub time{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.day{align-self:center;font-size:12px;color:var(--muted);background:var(--raised);border-radius:999px;padding:2px 12px}
+.compose{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line)}
+.compose textarea{flex:1;min-height:48px;max-height:140px;border-radius:12px;border:1px solid var(--line2);padding:12px;font:16px var(--fb);resize:vertical}
+@media (max-width:640px){.chat-list{max-width:none}.thread{min-height:440px}}
+</style>
+</head>
+<body data-page="messages">
+<main class="wrap" style="padding-top:28px">
+  <h1 style="font-size:38px">الرسائل والأرشيف</h1>
+  <p class="muted" style="margin:6px 0 0">كل المحادثات بين البائع والمشتري محفوظة هنا للرجوع إليها، ولا يمكن حذف الرسائل أو تعديلها.</p>
+  <div id="gate" class="panel hidden" style="margin-top:20px;text-align:center"></div>
+  <div class="chat-wrap hidden" id="app">
+    <aside class="chat-list" aria-label="المحادثات">
+      <input type="search" id="cq" placeholder="ابحث في المحادثات" aria-label="بحث">
+      <div id="list"></div>
+    </aside>
+    <section class="thread" aria-label="المحادثة">
+      <header><b id="tName">اختر محادثة</b><div class="muted" id="tTopic" style="font-size:14px"></div></header>
+      <div class="msgs" id="msgs" aria-live="polite"><p class="muted" style="margin:auto">ابدأ المراسلة من «قسم التجار» عبر زر «مراسلة» أو «تواصل مع البائع».</p></div>
+      <form class="compose hidden" id="cf"><textarea name="t" placeholder="اكتب رسالتك…" aria-label="الرسالة" maxlength="2000"></textarea><button class="btn btn-gold" type="submit">إرسال</button></form>
+    </section>
+  </div>
+</main>
+<script type="module">
+import { currentUser, onCurrentUser, openAuth, esc, toast } from './layout.js';
+import { watchChats, watchMessages, sendMessage } from './db.js';
+const $ = (id) => document.getElementById(id);
+var chats = [], cur = new URLSearchParams(location.search).get('c'), unMsgs = null, unChats = null, me = null;
+
+onCurrentUser(async (u) => {
+  me = u;
+  const ok = u && (u.isAdmin || u.status === 'approved');
+  $('gate').classList.toggle('hidden', !!ok); $('app').classList.toggle('hidden', !ok);
+  if (!u) { $('gate').innerHTML = '<p>سجّل الدخول لعرض رسائلك.</p><button class="btn btn-gold" id="gIn">دخول</button>'; $('gIn').onclick = () => openAuth(); }
+  else if (!ok) $('gate').innerHTML = '<p>المراسلة متاحة للأعضاء المعتمدين فقط. حسابك قيد المراجعة.</p>';
+  unChats && unChats(); unChats = null;
+  if (ok) unChats = await watchChats(u.uid, (cs) => { chats = cs; drawList(); if (cur) select(cur, true); });
+});
+
+const other = (c) => { const id = (c.members || []).find((x) => x !== me.uid) || ''; return (c.names || {})[id] || 'عضو'; };
+$('cq').oninput = drawList;
+function drawList() {
+  const q = $('cq').value.trim();
+  const list = chats.filter((c) => !q || (other(c) + ' ' + (c.topic || '') + ' ' + (c.lastText || '')).includes(q));
+  $('list').innerHTML = list.length ? list.map((c) => `<button class="chat-item" data-id="${esc(c.id)}" aria-current="${c.id === cur}"><b>${esc(other(c))}</b><small>${esc(c.topic ? '«' + c.topic + '» — ' : '')}${esc(c.lastText || 'محادثة جديدة')}</small></button>`).join('') : '<p class="muted" style="padding:16px">لا توجد محادثات بعد.</p>';
+}
+$('list').onclick = (e) => { const b = e.target.closest('.chat-item'); if (b) select(b.dataset.id); };
+
+async function select(id, keep) {
+  const c = chats.find((x) => x.id === id); if (!c) return;
+  if (keep && unMsgs && $('cf').dataset.id === id) return;
+  cur = id; drawList(); history.replaceState(null, '', '?c=' + encodeURIComponent(id));
+  $('tName').textContent = other(c); $('tTopic').textContent = c.topic ? 'بخصوص: ' + c.topic : '';
+  $('cf').classList.remove('hidden'); $('cf').dataset.id = id;
+  unMsgs && unMsgs();
+  unMsgs = await watchMessages(id, (ms) => {
+    let lastDay = '';
+    $('msgs').innerHTML = ms.length ? ms.map((m) => {
+      const d = new Date(m.at), day = d.toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long' });
+      const sep = day !== lastDay ? `<span class="day">${day}</span>` : ''; lastDay = day;
+      return `${sep}<div class="bub ${m.from === me.uid ? 'me' : 'them'}">${esc(m.text)}<time>${d.toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' })}</time></div>`;
+    }).join('') : '<p class="muted" style="margin:auto">لا توجد رسائل بعد — اكتب أول رسالة.</p>';
+    $('msgs').scrollTop = $('msgs').scrollHeight;
+  });
+}
+$('cf').onsubmit = async (e) => {
+  e.preventDefault(); const t = e.target.t.value; if (!t.trim()) return;
+  e.target.querySelector('button').disabled = true;
+  try { await sendMessage(cur, me, t); e.target.reset(); } catch (x) { toast('تعذّر الإرسال'); console.error(x); }
+  finally { e.target.querySelector('button').disabled = false; }
+};
+$('cf').t.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('cf').requestSubmit(); } });
+</script>
+</body>
+</html>
