@@ -188,15 +188,22 @@ function start({ db, F }) {
   };
   // إنهاء القطعة: ترسية على صاحب أعلى مزايدة وتسجيله في «الفائزون»
   async function closeLot(l, forceUnsold = false) {
-    const sold = !forceUnsold && !!l.leaderUid;
-    await F.updateDoc(F.doc(db, 'lots', l.id), { status: sold ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
-    if (sold) await F.setDoc(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: l.name, lotNo: l.no, uid: l.leaderUid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
-    toast(sold ? 'رُسّيت على المضرب ' + l.leaderPaddle : 'انتهت بدون بيع');
+    // تُقرأ القطعة من الخادم لحظة الإغلاق حتى تُرسى على آخر مزايدة مقبولة فعلاً
+    let res = null;
+    await F.runTransaction(db, async (tx) => {
+      const ref = F.doc(db, 'lots', l.id); const s = await tx.get(ref); const d = s.data();
+      if (!d || d.status !== 'live') return;
+      const sold = !forceUnsold && !!d.leaderUid;
+      tx.update(ref, { status: sold ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
+      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
+      res = sold ? d.leaderPaddle : 0;
+    });
+    if (res !== null) toast(res ? 'رُسّيت على المضرب ' + res : 'انتهت بدون بيع');
   }
   let closing = '';
   setInterval(() => {
     const l = lots.find((x) => x.id === auction.currentLotId && x.status === 'live');
-    if (l && ms(l.endsAt) && Date.now() > ms(l.endsAt) + 1500 && closing !== l.id) { closing = l.id; closeLot(l).catch((x) => { closing = ''; console.error(x); }); }
+    if (l && ms(l.endsAt) && Date.now() > ms(l.endsAt) + 4000 && closing !== l.id) { closing = l.id; closeLot(l).catch((x) => { closing = ''; console.error(x); }); }
   }, 2000);
   function drawLive() {
     const l = lots.find((x) => x.id === auction.currentLotId && x.status === 'live');

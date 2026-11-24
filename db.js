@@ -240,7 +240,8 @@ export async function watchMyWins(uid, cb) {
   if (DEMO) {
     const f = () => {
       const l = demo.lots.l3;
-      if (l && l.leaderUid === uid && Date.now() > l.endsAt && !demoWins.l3) demoWins.l3 = { lotId: 'l3', lotName: l.name, lotNo: l.no, uid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment', createdAt: Date.now() };
+      if (l && l.status === 'live' && Date.now() > l.endsAt + 4000) { l.status = 'sold'; setTimeout(demoEmit, 0); }
+      if (l && l.status === 'sold' && l.leaderUid === uid && !demoWins.l3) demoWins.l3 = { lotId: 'l3', lotName: l.name, lotNo: l.no, uid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment', createdAt: Date.now() };
       cb(Object.values(demoWins).filter((w) => w.uid === uid));
     };
     demo.subs.add(f); f(); const t = setInterval(f, 2000); return () => { demo.subs.delete(f); clearInterval(t); };

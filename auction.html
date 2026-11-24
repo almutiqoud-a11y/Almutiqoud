@@ -173,13 +173,15 @@ function paint() {
   else if (lot.leaderUid === u.uid) { st.textContent = 'أنت الأعلى الآن'; st.style.color = '#8FD19E'; }
   else { st.textContent = lot.leaderUid ? 'تمت المزايدة عليك' : ''; st.style.color = '#F0A090'; }
   $('bidBtn').disabled = !live;
-  // رسالة انتهاء المزاد على الشاشة
-  const ended = !live && (lot.status !== 'live' || (lot.endsAt && Date.now() >= lot.endsAt));
+  // رسالة انتهاء المزاد على الشاشة — النتيجة تُعرض فقط بعد اعتمادها من الخادم
+  const closed = lot.status === 'sold' || lot.status === 'unsold';
+  const ended = closed || (lot.endsAt && Date.now() >= lot.endsAt);
   $('endBox').classList.toggle('hidden', !ended);
   if (ended) {
-    const won = lot.leaderPaddle != null && lot.status !== 'unsold';
-    $('endLine').innerHTML = won ? `رسا المزاد على المضرب <strong>${esc(lot.leaderPaddle)}</strong> بمبلغ <strong>${fmt(lot.currentPrice)}</strong> ريال` : 'لم تُبع هذه القطعة';
-    if (won && u && lot.leaderUid === u.uid && !myWins.some((w) => w.lotId === lot.id)) showPendingWin();
+    if (!closed) $('endLine').textContent = 'جارٍ اعتماد النتيجة…';
+    else if (lot.status === 'sold') $('endLine').innerHTML = `رسا المزاد على المضرب <strong>${esc(lot.leaderPaddle)}</strong> بمبلغ <strong>${fmt(lot.currentPrice)}</strong> ريال`;
+    else $('endLine').textContent = 'لم تُبع هذه القطعة';
+    if (!closed && u) { st.textContent = 'بانتظار اعتماد النتيجة'; st.style.color = '#BFAE95'; }
   }
   drawWins();
 }
