@@ -253,3 +253,18 @@ export async function uploadReceipt(lotId, dataUrl) {
   const { db, F } = await init();
   await F.updateDoc(F.doc(db, 'wins', lotId), { receipt: dataUrl, status: 'receipt_uploaded', receiptAt: Date.now() });
 }
+
+/* ---------------- إعدادات الموقع (البنك والتواصل) ---------------- */
+// تُعبّأ من لوحة التحكم › الإعدادات، وتُستخدم قيم firebase-config.js إن كانت فارغة
+import { PAYMENT as P0, CONTACT as C0 } from './firebase-config.js';
+const defaults = () => ({ bank: P0.bank, accountName: P0.accountName, iban: P0.iban, days: P0.days, whatsapp: C0.whatsapp, whatsappIntl: C0.whatsappIntl, email: C0.email, cr: C0.cr });
+export async function watchSettings(cb) {
+  if (DEMO) { cb(defaults()); return () => {}; }
+  const { db, F } = await init();
+  return F.onSnapshot(F.doc(db, 'settings', 'site'), (s) => { const d = s.exists() ? s.data() : {}; const o = defaults(); for (const k in d) if (d[k] !== '' && d[k] != null) o[k] = d[k]; cb(o); }, () => cb(defaults()));
+}
+export async function saveSettings(data) {
+  if (DEMO) return;
+  const { db, F } = await init();
+  await F.setDoc(F.doc(db, 'settings', 'site'), data, { merge: true });
+}

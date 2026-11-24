@@ -75,6 +75,9 @@ service cloud.firestore {
     }
 
     // منتجات القطاعي وأسعار الجملة: الكل يقرأ، والمدير يكتب
+    // إعدادات الموقع (بيانات البنك والتواصل)
+    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
+
     match /products/{id} { allow read: if true; allow write: if isAdmin(); }
     match /wholesale/{id} { allow read: if true; allow write: if isAdmin(); }
 

@@ -30,6 +30,7 @@
       <button class="chip" data-t="quotes">طلبات الجملة</button>
       <button class="chip" data-t="orders">طلبات القطاعي</button>
       <button class="chip" data-t="wins">الفائزون</button>
+      <button class="chip" data-t="settings">الإعدادات</button>
     </div>
 
     <section data-p="auction">
@@ -89,13 +90,26 @@
     <section data-p="wins" class="hidden"><div class="panel"><h3>الفائزون في المزاد</h3>
       <p class="muted" style="margin:-4px 0 12px;font-size:14px">تُسجَّل الترسية تلقائياً عند انتهاء الوقت. أرسل للفائز رسالة التهنئة وبيانات التحويل، ثم حدّث الحالة عند استلام المبلغ.</p>
       <div class="table-box"><table><thead><tr><th>التاريخ</th><th>القطعة</th><th>المضرب</th><th>الفائز</th><th>المبلغ</th><th>الإيصال</th><th>الحالة</th><th></th></tr></thead><tbody id="winRows"></tbody></table></div></div></section>
+    <section data-p="settings" class="hidden"><form class="panel form" id="setForm" style="max-width:640px">
+      <h3>بيانات التحويل للفائزين</h3>
+      <label class="field">اسم البنك<input name="bank" placeholder="مثال: مصرف الراجحي"></label>
+      <label class="field">اسم صاحب الحساب<input name="accountName"></label>
+      <label class="field">رقم الآيبان<input name="iban" dir="ltr" placeholder="SA00 0000 0000 0000 0000 0000" style="text-align:left"></label>
+      <label class="field">مهلة التحويل (أيام)<input name="days" type="number" min="1" value="2"></label>
+      <h3 style="margin-top:10px">بيانات التواصل</h3>
+      <label class="field">رقم الواتساب (للعرض في الموقع)<input name="whatsapp" type="tel" placeholder="05xxxxxxxx"></label>
+      <label class="field">رقم الواتساب بالصيغة الدولية (لزر التواصل)<input name="whatsappIntl" dir="ltr" inputmode="numeric" placeholder="9665xxxxxxxx" style="text-align:left"></label>
+      <label class="field">البريد الإلكتروني<input name="email" type="email" dir="ltr" style="text-align:left"></label>
+      <label class="field">السجل التجاري<input name="cr" inputmode="numeric"></label>
+      <button class="btn btn-gold">حفظ الإعدادات</button>
+    </form></section>
     <section data-p="orders" class="hidden"><div class="panel"><h3>طلبات القطاعي</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>العميل</th><th>الجوال</th><th>العنوان</th><th>المنتجات</th><th>الحالة</th></tr></thead><tbody id="oRows"></tbody></table></div></div></section>
   </div>
 </main>
 <script type="module">
 import { onCurrentUser, esc, fmt, toast, icons } from './layout.js';
 import { PAYMENT } from './firebase-config.js';
-import { admin, DEMO } from './db.js';
+import { admin, DEMO, watchSettings, saveSettings } from './db.js';
 const $ = (id) => document.getElementById(id);
 let started = false;
 onCurrentUser(async (u) => {
@@ -176,7 +190,7 @@ function start({ db, F }) {
   async function closeLot(l, forceUnsold = false) {
     const sold = !forceUnsold && !!l.leaderUid;
     await F.updateDoc(F.doc(db, 'lots', l.id), { status: sold ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
-    if (sold) await F.setDoc(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: l.name, lotNo: l.no, uid: l.leaderUid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (PAYMENT.days || 2) * 864e5 });
+    if (sold) await F.setDoc(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: l.name, lotNo: l.no, uid: l.leaderUid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
     toast(sold ? 'رُسّيت على المضرب ' + l.leaderPaddle : 'انتهت بدون بيع');
   }
   let closing = '';
@@ -233,6 +247,16 @@ function start({ db, F }) {
     f.reset(); toast('حُفظ');
   };
 
+  // الإعدادات
+  let SET = { ...PAYMENT };
+  watchSettings((s) => { SET = s; const f = $('setForm'); if (document.activeElement && f.contains(document.activeElement)) return;
+    ['bank', 'accountName', 'iban', 'days', 'whatsapp', 'whatsappIntl', 'email', 'cr'].forEach((k) => { const v = s[k] ?? ''; f[k].value = String(v).startsWith('[') ? '' : v; }); });
+  $('setForm').onsubmit = async (e) => {
+    e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
+    d.days = +d.days || 2; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
+    await saveSettings(d); toast('حُفظت الإعدادات');
+  };
+
   // الفائزون
   const WST = [['awaiting_payment', 'بانتظار التحويل'], ['receipt_uploaded', 'رُفع الإيصال'], ['paid', 'تم الاستلام'], ['delivered', 'تم التسليم'], ['cancelled', 'ملغاة']];
   const users = {};
@@ -242,7 +266,7 @@ function start({ db, F }) {
     wins = q.docs.map((d) => ({ id: d.id, ...d.data() }));
     await Promise.all(wins.map((w) => userOf(w.uid)));
     $('winRows').innerHTML = wins.map((w) => { const u = users[w.uid] || {};
-      const msg = `مبروك ${u.name || ''}! رسا عليك مزاد «${w.lotName}» في المعتق للعود بمبلغ ${fmt(w.amount)} ريال (مضربك ${w.paddle}).\nنرجو التحويل خلال ${PAYMENT.days} يوم:\nالبنك: ${PAYMENT.bank}\nاسم الحساب: ${PAYMENT.accountName}\nالآيبان: ${PAYMENT.iban}\nوارفع صورة الإيصال من صفحة المزاد، أو أرسلها هنا.`;
+      const msg = `مبروك ${u.name || ''}! رسا عليك مزاد «${w.lotName}» في المعتق للعود بمبلغ ${fmt(w.amount)} ريال (مضربك ${w.paddle}).\nنرجو التحويل خلال ${SET.days} يوم:\nالبنك: ${SET.bank}\nاسم الحساب: ${SET.accountName}\nالآيبان: ${SET.iban}\nوارفع صورة الإيصال من صفحة المزاد، أو أرسلها هنا.`;
       const wa = u.phone ? `https://wa.me/966${String(u.phone).replace(/^0/, '')}?text=${encodeURIComponent(msg)}` : '';
       return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td>
         <td>${w.receipt ? `<button class="btn btn-line" data-rc="${w.id}">عرض</button>` : '<span class="muted">—</span>'}</td>

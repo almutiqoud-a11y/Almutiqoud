@@ -1,5 +1,5 @@
 // الهيدر والفوتر ونافذة الدخول والسلة — مشتركة بين كل الصفحات
-import { onUser, signIn, signUp, signOutUser, resetPassword, submitOrder, DEMO } from './db.js';
+import { onUser, signIn, signUp, signOutUser, resetPassword, submitOrder, DEMO, watchSettings } from './db.js';
 import { CONTACT } from './firebase-config.js';
 
 export const icons = {
@@ -57,7 +57,7 @@ document.body.insertAdjacentHTML('beforeend', `
   <div class="col" style="flex:1 1 260px"><img src="logo_gold.png" alt="المعتق للعود"><span class="muted">رائحة تكتمل بها الفخامة.</span></div>
   <div class="col"><b>تسوّق</b><a href="auction.html">المزاد المباشر</a><a href="wholesale.html">الجملة</a><a href="retail.html">القطاعي</a></div>
   <div class="col"><b>المساعدة</b><a href="terms.html">شروط المزاد</a><a href="terms.html#shipping">الشحن والاسترجاع</a></div>
-  <div class="col"><b>تواصل</b><span>واتساب: ${esc(CONTACT.whatsapp)}</span><span>${esc(CONTACT.email)}</span><span>السجل التجاري: ${esc(CONTACT.cr)}</span></div>
+  <div class="col"><b>تواصل</b><span id="ftWa">واتساب: ${esc(CONTACT.whatsapp)}</span><span id="ftEm">${esc(CONTACT.email)}</span><span id="ftCr">السجل التجاري: ${esc(CONTACT.cr)}</span></div>
 </div><div class="copy">© ${new Date().getFullYear()} المعتق للعود — جميع الحقوق محفوظة</div></footer>`);
 
 function renderUserArea() {
@@ -165,6 +165,10 @@ function openCart() {
   renderCart();
 }
 document.getElementById('cartBtn').onclick = openCart;
+watchSettings((c) => {
+  const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+  set('ftWa', 'واتساب: ' + (c.whatsapp || '')); set('ftEm', c.email || ''); set('ftCr', 'السجل التجاري: ' + (c.cr || ''));
+});
 renderCartCount(); renderUserArea();
 
 // تصغير صورة من الجهاز إلى JPEG خفيف (للإيصالات وصور المنتجات)
