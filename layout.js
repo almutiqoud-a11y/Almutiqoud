@@ -68,7 +68,7 @@ function renderUserArea() {
     ${u.paddle ? `<span class="paddle-chip" title="رقم مزايدتك"><b>${u.paddle}</b>رقمك</span>` : ''}
     <a class="icon-btn" href="messages.html" aria-label="الرسائل" title="الرسائل"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4V5Z"/></svg></a>
     ${u.status === 'pending' ? '<span class="pend-chip" title="حسابك قيد المراجعة">بانتظار الاعتماد</span>' : ''}
-    ${u.isAdmin ? '<a class="btn btn-line btn-sm" href="admin.html">لوحة التحكم</a>' : ''}
+    ${u.isAdmin ? '<a class="btn btn-line btn-sm" href="admin.html">التحكم</a>' : ''}
     <button class="btn btn-line btn-sm" id="logoutBtn">خروج</button></span>`;
   el.querySelector('#logoutBtn').onclick = () => signOutUser();
 }
