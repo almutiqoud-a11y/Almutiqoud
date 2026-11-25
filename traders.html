@@ -121,7 +121,7 @@ onCurrentUser((u) => {
   const gate = $('gate'), app = $('app');
   const ok = u && (u.isAdmin || u.status === 'approved');
   gate.classList.toggle('hidden', !!ok); app.classList.toggle('hidden', !ok);
-  if (!u) gate.innerHTML = `<h2>قسم خاص بالأعضاء المعتمدين</h2><p class="muted">الدخول للأفراد بوثيقة العمل الحر، وللتجار بالسجل التجاري.</p><button class="btn btn-gold" id="gIn">دخول / تسجيل</button>`;
+  if (!u) gate.innerHTML = `<h2>قسم خاص بالأعضاء المعتمدين</h2><p class="muted">الدخول للأفراد بوثيقة العمل الحر، وللتجار بالسجل التجاري.</p><button class="btn btn-gold" id="gIn">تسجيل الدخول</button>`;
   else if (!u.type && !u.isAdmin) gate.innerHTML = `<h2>استكمل بيانات حسابك</h2><p class="muted">أضف رقم وثيقة العمل الحر أو السجل التجاري ليُراجَع حسابك.</p><button class="btn btn-gold" id="gPf">استكمال البيانات</button>`;
   else if (!ok) gate.innerHTML = `<h2>حسابك قيد المراجعة</h2><p class="muted">نراجع ${u.type === 'trader' ? 'السجل التجاري' : 'وثيقة العمل الحر'} رقم <b dir="ltr">${esc(u.docNo)}</b>، وسيُفتح لك القسم فور الاعتماد.</p>`;
   $('gIn')?.addEventListener('click', () => openAuth('up'));

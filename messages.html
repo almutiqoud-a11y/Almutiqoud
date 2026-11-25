@@ -63,7 +63,7 @@ onCurrentUser(async (u) => {
   me = u;
   const ok = u && (u.isAdmin || u.status === 'approved');
   $('gate').classList.toggle('hidden', !!ok); $('app').classList.toggle('hidden', !ok);
-  if (!u) { $('gate').innerHTML = '<p>سجّل الدخول لعرض رسائلك.</p><button class="btn btn-gold" id="gIn">دخول</button>'; $('gIn').onclick = () => openAuth(); }
+  if (!u) { $('gate').innerHTML = '<p>سجّل الدخول لعرض رسائلك.</p><button class="btn btn-gold" id="gIn">تسجيل الدخول</button>'; $('gIn').onclick = () => openAuth(); }
   else if (!ok) $('gate').innerHTML = '<p>المراسلة متاحة للأعضاء المعتمدين فقط. حسابك قيد المراجعة.</p>';
   unChats && unChats(); unChats = null;
   if (ok) unChats = await watchChats(u.uid, (cs) => { chats = cs; drawList(); if (cur) select(cur, true); });

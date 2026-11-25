@@ -47,6 +47,7 @@ ${DEMO ? '<div class="topbar" style="background:#2A1C10;color:#fff">وضع ال�
   <a class="brand" href="index.html"><img src="mark_gold.png" alt="شعار المعتق للعود"><span><b>المعتق للعود</b><small>رائحة تكتمل بها الفخامة</small></span></a>
   <nav class="main-nav" aria-label="القائمة الرئيسية">${nav.map(([h, k, l]) => `<a href="${h}" class="${page === k ? 'active' : ''}">${k === 'auction' ? '<span class="dot"></span>' : ''}${l}</a>`).join('')}</nav>
   <div class="header-actions">
+    <button class="icon-btn hidden" id="installBtn" aria-label="أضف التطبيق إلى الشاشة الرئيسية" title="أضف التطبيق إلى الشاشة الرئيسية"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M12 8.5v6M9 11.5h6"/><path d="M10.5 18.5h3"/></svg></button>
     <button class="icon-btn" id="cartBtn" aria-label="السلة">${icons.bag}<span class="badge-count hidden" id="cartCount">0</span></button>
     <span id="userArea"></span>
   </div>
@@ -63,7 +64,7 @@ document.body.insertAdjacentHTML('beforeend', `
 function renderUserArea() {
   const el = document.getElementById('userArea'); if (!el) return;
   const u = currentUser;
-  if (!u) { el.innerHTML = '<span style="display:flex;gap:8px;align-items:center"><span class="visitor-chip" title="أنت تتصفح كزائر"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>زائر</span><button class="btn btn-gold btn-sm" id="loginBtn">دخول / تسجيل</button></span>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
+  if (!u) { el.innerHTML = '<span style="display:flex;gap:8px;align-items:center"><span class="visitor-chip" title="أنت تتصفح كزائر"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>زائر</span><button class="btn btn-gold btn-sm" id="loginBtn">تسجيل الدخول</button></span>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
   el.innerHTML = `<span style="display:flex;gap:8px;align-items:center">
     ${u.paddle ? `<span class="paddle-chip" title="رقم مزايدتك"><b>${u.paddle}</b>رقمك</span>` : ''}
     <a class="icon-btn" href="messages.html" aria-label="الرسائل" title="الرسائل"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4V5Z"/></svg></a>
@@ -103,7 +104,7 @@ export function openAuth(mode = 'in') {
   o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="authT">
     <button class="icon-btn close" aria-label="إغلاق">${icons.x}</button>
     <h2 id="authT">حسابك في المعتق</h2>
-    <div class="tabs2"><button class="chip" data-m="in">دخول</button><button class="chip" data-m="up">حساب جديد</button></div>
+    <div class="tabs2"><button class="chip" data-m="in">تسجيل الدخول</button><button class="chip" data-m="up">حساب جديد</button></div>
     <form class="form" novalidate>
       <label class="field up">الاسم<input name="name" autocomplete="name"></label>
       <label class="field"><span class="idLbl">رقم الجوال</span><input name="phone" type="tel" placeholder="05xxxxxxxx" autocomplete="tel" dir="ltr" style="text-align:right"></label>
@@ -236,3 +237,35 @@ export function shrinkImage(file, max = 1000, q = 0.72) {
     img.onerror = () => rej(new Error('تعذّر قراءة الصورة')); img.src = url;
   });
 }
+
+/* ---------------- أيقونة «أضف للشاشة الرئيسية» ---------------- */
+(() => {
+  const btn = document.getElementById('installBtn'); if (!btn) return;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (standalone) return; // مفتوح من الأيقونة أصلاً
+  btn.classList.remove('hidden');
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; });
+  window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); toast('تمت إضافة المعتق إلى الشاشة الرئيسية'); });
+  const ua = navigator.userAgent;
+  const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const shareIc = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A73E8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+  btn.onclick = async () => {
+    if (deferred) { deferred.prompt(); try { await deferred.userChoice; } catch {} deferred = null; return; }
+    const steps = ios
+      ? `<li>افتح الموقع في متصفح <b>Safari</b>.</li><li>اضغط زر المشاركة ${shareIc} (أسفل الشاشة في الجوال، وأعلاها في الآيباد).</li><li>اختر <b>«إضافة إلى الشاشة الرئيسية»</b>.</li><li>اضغط <b>«إضافة»</b> — تظهر أيقونة المعتق على شاشتك.</li>`
+      : `<li>افتح الموقع في متصفح <b>Chrome</b>.</li><li>اضغط قائمة النقاط الثلاث <b>⋮</b> أعلى الشاشة.</li><li>اختر <b>«إضافة إلى الشاشة الرئيسية»</b> أو <b>«تثبيت التطبيق»</b>.</li><li>اضغط <b>«إضافة»</b> — تظهر أيقونة المعتق على شاشتك.</li>`;
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="instT" style="max-width:420px">
+      <button class="icon-btn close" aria-label="إغلاق">${icons.x}</button>
+      <div style="text-align:center"><img src="apple-touch-icon.png" alt="" width="76" height="76" style="border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,.25)"></div>
+      <h2 id="instT" style="text-align:center;margin-top:12px">أضف المعتق إلى شاشتك</h2>
+      <p class="muted" style="text-align:center;margin-top:-4px">افتح المنصة بلمسة واحدة مثل التطبيق</p>
+      <ol style="line-height:2.1;padding-inline-start:22px">${steps}</ol>
+      <button class="btn btn-gold" style="width:100%" id="instOk">تم</button></div>`;
+    document.body.appendChild(o);
+    const close = () => o.remove();
+    o.querySelector('.close').onclick = close; o.querySelector('#instOk').onclick = close;
+    o.addEventListener('click', (e) => { if (e.target === o) close(); });
+  };
+})();
