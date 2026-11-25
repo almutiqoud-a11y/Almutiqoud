@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=36">
+<link rel="stylesheet" href="style.css?v=50">
 <style>
 .tr-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}
 .dir-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:8px}
@@ -86,7 +86,11 @@
               <div class="pick-grid" id="slots"></div>
               <label class="btn btn-line btn-sm" style="margin-top:8px;align-self:flex-start">اختر صوراً<input type="file" accept="image/*" multiple id="pics" class="hidden"></label>
             </div>
-            <label class="field">فيديو قصير (رابط يوتيوب أو شورتس أو mp4)<input name="video" type="url" dir="ltr" style="text-align:left" placeholder="https://youtube.com/shorts/…"></label>
+            <div class="field">فيديو قصير (حتى 50 ميجا)
+              <label class="btn btn-line btn-sm" style="align-self:flex-start">اختر فيديو من جهازك<input type="file" accept="video/*" id="vidPick" class="hidden"></label>
+              <span class="muted" id="vidState" style="font-size:13px"></span>
+              <input name="video" type="url" dir="ltr" style="text-align:left" placeholder="أو الصق رابط يوتيوب">
+            </div>
             <div class="msg hidden" id="lfMsg"></div>
             <p class="muted" style="margin:0;font-size:13px">عمولة المنصة 10% على التاجر عند إتمام البيع.</p>
             <button class="btn btn-gold" type="submit">حفظ المنتج</button>
@@ -99,7 +103,7 @@
 </main>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, openCompleteProfile, esc, fmt, toast, shrinkImage, COUNTRIES } from './layout.js';
-import { getDirectory, getListings, saveListing, deleteListing, openChat } from './db.js';
+import { getDirectory, getListings, saveListing, deleteListing, openChat, uploadMedia, MAX_VIDEO_MB } from './db.js';
 const $ = (id) => document.getElementById(id);
 var started = false, dir = [], lst = [], imgs = [];
 
@@ -207,18 +211,28 @@ $('slots').onclick = (e) => { const b = e.target.closest('[data-rm]'); if (b) { 
 $('pics').onchange = async (e) => {
   const files = [...e.target.files].slice(0, 4 - imgs.length); e.target.value = '';
   if (!files.length) { toast('الحد 4 صور'); return; }
-  for (const f of files) { try { imgs.push(await shrinkImage(f, 800, 0.62)); } catch { toast('تعذّر قراءة صورة'); } }
+  for (const f of files) { try { imgs.push(await shrinkImage(f, 1400, 0.82)); } catch { toast('تعذّر قراءة صورة'); } }
   drawSlots();
 };
-$('lfReset').onclick = () => { $('lf').reset(); $('lf').id.value = ''; imgs = []; drawSlots(); $('lfReset').classList.add('hidden'); };
+var vidFile = null;
+$('vidPick').onchange = (e) => {
+  const v = e.target.files[0]; e.target.value = ''; if (!v) return;
+  if (v.size > MAX_VIDEO_MB * 1048576) { toast(`حجم الفيديو أكبر من ${MAX_VIDEO_MB} ميجا`); return; }
+  vidFile = v; $('lf').video.value = ''; $('vidState').textContent = `✓ ${v.name} (${(v.size / 1048576).toFixed(1)} ميجا) — يُرفع عند الحفظ`;
+};
+$('lfReset').onclick = () => { vidFile = null; $('vidState').textContent = ''; $('lf').reset(); $('lf').id.value = ''; imgs = []; drawSlots(); $('lfReset').classList.add('hidden'); };
 $('lf').onsubmit = async (e) => {
   e.preventDefault(); const f = e.target, m = $('lfMsg');
   const d = { name: f.name.value.trim(), desc: f.desc.value.trim(), price: f.price.value === '' ? null : +f.price.value, unit: f.unit.value, video: f.video.value.trim(), images: imgs.slice(0, 4) };
   if (!d.name) { m.className = 'msg err'; m.textContent = 'اكتب اسم المنتج'; return; }
   if (!d.images.length) { m.className = 'msg err'; m.textContent = 'أضف صورة واحدة على الأقل'; return; }
   f.querySelector('[type=submit]').disabled = true;
-  try { await saveListing(currentUser, d, f.id.value || null); lst = await getListings(); drawMine(); drawLst(); $('lfReset').click(); m.className = 'msg ok'; m.textContent = 'حُفظ المنتج وظهر في «منتجات الأعضاء».'; }
-  catch (x) { m.className = 'msg err'; m.textContent = 'تعذّر الحفظ — قد يكون حجم الصور كبيراً، جرّب صوراً أقل.'; console.error(x); }
+  try {
+    m.className = 'msg ok'; m.textContent = 'جارٍ رفع الصور…';
+    for (let i = 0; i < d.images.length; i++) if (d.images[i].startsWith('data:')) d.images[i] = await uploadMedia('listings', d.images[i], (p) => (m.textContent = `رفع الصورة ${i + 1}: ${p}%`));
+    if (vidFile) { d.video = await uploadMedia('videos', vidFile, (p) => (m.textContent = `رفع الفيديو: ${p}%`)); vidFile = null; $('vidState').textContent = ''; }
+    await saveListing(currentUser, d, f.id.value || null); lst = await getListings(); drawMine(); drawLst(); $('lfReset').click(); m.className = 'msg ok'; m.textContent = 'حُفظ المنتج وظهر في «منتجات الأعضاء».'; }
+  catch (x) { m.className = 'msg err'; m.textContent = 'تعذّر الرفع أو الحفظ — تأكد من الاتصال وحاول مرة أخرى.'; console.error(x); }
   finally { f.querySelector('[type=submit]').disabled = false; }
 };
 </script>

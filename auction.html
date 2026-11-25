@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=43">
+<link rel="stylesheet" href="style.css?v=50">
 </head>
 <body data-page="auction">
 <div class="visitor-gate hidden" id="vGate"><div class="card">
@@ -179,9 +179,9 @@ function paintMedia() {
   const addBtn = (k, t) => adm ? `<label class="lg-add">${t}<input type="file" accept="${k === 'video' ? 'video/*' : 'image/*'}" data-k="${k}" class="hidden"></label>` : '';
   const cell = (i) => `<div class="lg-c">${imgs[i] ? `<button type="button" class="lg-i" data-src="${esc(imgs[i])}" aria-label="تكبير الصورة ${i + 1}"><img src="${esc(imgs[i])}" alt="صورة المنتج ${i + 1}"></button>` : '<div class="lg-i lg-empty" aria-hidden="true"></div>'}${addBtn(F[i], imgs[i] ? '+ تغيير' : '+ صورة')}</div>`;
   const first = imgs.find(Boolean);
-  const vid = lot?.video ? videoHTML(lot.video) : first ? `<img src="${esc(first)}" alt="صورة المنتج">` : '';
+  const vid = lot?.video ? videoHTML(lot.video) : first ? `<img src="${esc(first)}" alt="صورة المنتج">` : '<div class="lg-ph">فيديو المنتج</div>';
   $('lgal').innerHTML = `${cell(0)}${cell(1)}${cell(2)}${cell(3)}<div class="lg-v">${vid}${addBtn('video', lot?.video ? '+ تغيير الفيديو' : '+ فيديو')}</div>`;
-  $('media').classList.toggle('hidden', !(adm && lot) && !(imgs.some(Boolean) || lot?.video));
+  $('media').classList.toggle('hidden', !lot);
 }
 
 function paint() {

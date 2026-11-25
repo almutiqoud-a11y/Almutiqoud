@@ -7,13 +7,14 @@ let fb = null; // { auth, db, m: modules }
 
 async function init() {
   if (DEMO || fb) return fb;
-  const [app, auth, fs] = await Promise.all([
+  const [app, auth, fs, st] = await Promise.all([
     import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
     import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`)
-  ]);
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-storage.js`)
+  ]).then((r) => r);
   const a = app.initializeApp(firebaseConfig);
-  fb = { auth: auth.getAuth(a), db: fs.getFirestore(a), A: auth, F: fs };
+  fb = { auth: auth.getAuth(a), db: fs.getFirestore(a), A: auth, F: fs, app: a, S: st, storage: st.getStorage(a) };
   return fb;
 }
 
@@ -363,4 +364,28 @@ export async function sendMessage(id, user, text) {
   const { db, F } = await init();
   await F.addDoc(F.collection(db, 'chats', id, 'messages'), { from: user.uid, text, at: Date.now() });
   await F.updateDoc(F.doc(db, 'chats', id), { lastText: text.slice(0, 120), lastFrom: user.uid, updatedAt: Date.now() });
+}
+
+
+/* ---------------- رفع الصور والفيديو إلى Firebase Storage ---------------- */
+// الصور تُضغط قبل الرفع، والفيديو يُرفع كما هو (حتى 50 ميجا). يُعاد رابط مباشر للملف.
+export const MAX_VIDEO_MB = 50;
+function dataUrlToBlob(u) { const [h, b] = u.split(','); const mime = h.match(/:(.*?);/)[1]; const bin = atob(b); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: mime }); }
+export async function uploadMedia(folder, fileOrDataUrl, onProgress) {
+  const blob = typeof fileOrDataUrl === 'string' ? dataUrlToBlob(fileOrDataUrl) : fileOrDataUrl;
+  if (DEMO) return typeof fileOrDataUrl === 'string' ? fileOrDataUrl : URL.createObjectURL(blob);
+  const { storage, S, auth } = await init();
+  const uid = auth.currentUser?.uid || 'anon';
+  const ext = (blob.type.split('/')[1] || 'bin').replace('quicktime', 'mov').replace('jpeg', 'jpg');
+  const path = `${folder}/${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const task = S.uploadBytesResumable(S.ref(storage, path), blob, { contentType: blob.type });
+  await new Promise((res, rej) => task.on('state_changed', (s) => onProgress && onProgress(Math.round(s.bytesTransferred / s.totalBytes * 100)), rej, res));
+  return S.getDownloadURL(task.snapshot.ref);
+}
+
+// تحديث صورة/فيديو المنتج المعروض في المزاد مباشرة من صفحة المزاد (للمدير)
+export async function updateLotMedia(lotId, field, url) {
+  if (DEMO) { if (demo.lots[lotId]) { demo.lots[lotId][field] = url; demoEmit(); } return; }
+  const { db, F } = await init();
+  await F.updateDoc(F.doc(db, 'lots', lotId), { [field]: url });
 }

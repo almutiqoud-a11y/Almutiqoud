@@ -9,13 +9,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=36">
+<link rel="stylesheet" href="style.css?v=50">
 <style>
 .adm-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
 .adm h3{font-size:22px;color:var(--gold-dark);margin:0 0 12px}
 .adm table{min-width:720px;font-size:15px}
 .adm td .btn{height:36px;padding:0 12px;font-size:14px}
 .st{border-radius:999px;padding:2px 10px;font-size:13px;background:var(--raised)}
+.pslots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pslot{position:relative;aspect-ratio:1;border:1px dashed var(--line2);border-radius:10px;overflow:hidden;background:var(--soft)}
+.pslot .prev{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pslot-add{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--gold-dark);cursor:pointer;padding:4px}
+.pslot .imgclear{position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer}
 </style>
 </head>
 <body data-page="admin">
@@ -59,10 +64,13 @@
             <label class="field">الاسم<input name="name" required></label>
             <div class="row2"><label class="field">المنشأ<input name="origin"></label><label class="field">الوزن<input name="weight"></label></div>
             <label class="field">نبذة عن المنتج<textarea name="age" rows="3" placeholder="وصف مختصر: الرائحة، الدرجة، مدة التعتيق…"></textarea></label>
-            <div class="field">صورة المنتج<input type="file" accept="image/*" class="imgpick" style="height:auto;padding:10px"><input type="hidden" name="image"><img class="prev hidden" alt="معاينة الصورة" style="max-height:140px;width:auto;border-radius:10px;margin-top:6px"><button type="button" class="btn btn-line btn-sm imgclear hidden" style="align-self:flex-start;margin-top:6px">إزالة الصورة</button></div>
-            <label class="field">فيديو المنتج (رابط يوتيوب أو شورتس أو ملف mp4)<input name="video" type="url" inputmode="url" placeholder="https://youtube.com/shorts/…"></label>
-            <p class="muted" style="margin:0;font-size:13px">ارفع الفيديو على يوتيوب (يمكن «غير مدرج») والصق رابطه هنا.</p>
-            <button class="btn btn-gold btn-sm">حفظ المنتج</button></form>
+            <div class="field">صور المنتج (حتى 4)<div class="pslots"><div class="pslot" data-k="image"><input type="hidden" name="image"><img class="prev hidden" alt="صورة 1"><label class="pslot-add">+ صورة 1<input type="file" accept="image/*" class="imgpick hidden" data-k="image"></label><button type="button" class="imgclear hidden" data-k="image" aria-label="حذف الصورة">×</button></div><div class="pslot" data-k="image2"><input type="hidden" name="image2"><img class="prev hidden" alt="صورة 2"><label class="pslot-add">+ صورة 2<input type="file" accept="image/*" class="imgpick hidden" data-k="image2"></label><button type="button" class="imgclear hidden" data-k="image2" aria-label="حذف الصورة">×</button></div><div class="pslot" data-k="image3"><input type="hidden" name="image3"><img class="prev hidden" alt="صورة 3"><label class="pslot-add">+ صورة 3<input type="file" accept="image/*" class="imgpick hidden" data-k="image3"></label><button type="button" class="imgclear hidden" data-k="image3" aria-label="حذف الصورة">×</button></div><div class="pslot" data-k="image4"><input type="hidden" name="image4"><img class="prev hidden" alt="صورة 4"><label class="pslot-add">+ صورة 4<input type="file" accept="image/*" class="imgpick hidden" data-k="image4"></label><button type="button" class="imgclear hidden" data-k="image4" aria-label="حذف الصورة">×</button></div></div></div>
+            <div class="field">فيديو المنتج (حتى 50 ميجا)
+              <label class="btn btn-line btn-sm" style="align-self:flex-start">اختر فيديو من جهازك<input type="file" accept="video/*" class="vidpick hidden"></label>
+              <span class="muted vidstate" style="font-size:13px"></span>
+              <input name="video" type="url" inputmode="url" dir="ltr" style="text-align:left" placeholder="أو الصق رابط يوتيوب">
+            </div>
+                        <button class="btn btn-gold btn-sm">حفظ المنتج</button></form>
         </aside>
       </div>
     </section>
@@ -125,7 +133,7 @@
 <script type="module">
 import { onCurrentUser, esc, fmt, toast, icons } from './layout.js';
 import { PAYMENT } from './firebase-config.js';
-import { admin, DEMO, watchSettings, saveSettings, watchAllChats, watchMessages } from './db.js';
+import { admin, DEMO, watchSettings, saveSettings, watchAllChats, watchMessages, uploadMedia, MAX_VIDEO_MB } from './db.js';
 const $ = (id) => document.getElementById(id);
 let started = false;
 onCurrentUser(async (u) => {
@@ -146,7 +154,7 @@ const dt = (t) => (t ? new Date(ms(t)).toLocaleString('ar-SA', { dateStyle: 'sho
 const num = (v) => (v === '' || v == null ? null : +v);
 const fill = (f, d) => { f.reset(); Object.entries(d).forEach(([k, v]) => { if (f[k] && f[k].type !== 'file') f[k].type === 'checkbox' ? (f[k].checked = !!v) : (f[k].value = v ?? ''); }); if (f.image) showPrev(f); };
 // تصغير الصورة وحفظها داخل قاعدة البيانات (بدون الحاجة إلى Storage)
-function shrink(file, max = 900, q = 0.75) {
+function shrink(file, max = 1400, q = 0.82) {
   return new Promise((res, rej) => {
     const img = new Image(); const url = URL.createObjectURL(file);
     img.onload = () => { const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas');
@@ -155,12 +163,21 @@ function shrink(file, max = 900, q = 0.75) {
     img.onerror = () => rej(new Error('تعذّر قراءة الصورة')); img.src = url;
   });
 }
-function showPrev(f) { const v = f.image.value, p = f.querySelector('.prev'), c = f.querySelector('.imgclear'); p.src = v || ''; p.classList.toggle('hidden', !v); c.classList.toggle('hidden', !v); }
+function showPrev(f) {
+  const slots = f.querySelectorAll('.pslot');
+  if (slots.length) { slots.forEach((s) => { const v = f[s.dataset.k].value, p = s.querySelector('.prev'); p.src = v || ''; p.classList.toggle('hidden', !v); s.querySelector('.imgclear').classList.toggle('hidden', !v); s.querySelector('.pslot-add').classList.toggle('hidden', !!v); }); return; }
+  const v = f.image.value, p = f.querySelector('.prev'), c = f.querySelector('.imgclear'); p.src = v || ''; p.classList.toggle('hidden', !v); c.classList.toggle('hidden', !v);
+}
 document.addEventListener('change', async (e) => {
   const i = e.target.closest('.imgpick'); if (!i || !i.files[0]) return; const f = i.form;
-  try { f.image.value = await shrink(i.files[0]); showPrev(f); } catch (x) { toast(x.message); } i.value = '';
+  try { const d = await shrink(i.files[0]); toast('جارٍ رفع الصورة…'); f[i.dataset.k || 'image'].value = await uploadMedia('products', d); showPrev(f); toast('رُفعت الصورة'); } catch (x) { toast('تعذّر رفع الصورة'); console.error(x); } i.value = '';
 });
-document.addEventListener('click', (e) => { const b = e.target.closest('.imgclear'); if (b) { b.form.image.value = ''; showPrev(b.form); } });
+document.addEventListener('change', async (e) => {
+  const i = e.target.closest('.vidpick'); if (!i || !i.files[0]) return; const v = i.files[0], f = i.form, st = f.querySelector('.vidstate'); i.value = '';
+  if (v.size > MAX_VIDEO_MB * 1048576) { toast(`حجم الفيديو أكبر من ${MAX_VIDEO_MB} ميجا`); return; }
+  try { f.video.value = await uploadMedia('videos', v, (p) => (st.textContent = `رفع الفيديو: ${p}%`)); st.textContent = '✓ رُفع الفيديو'; } catch (x) { st.textContent = 'تعذّر رفع الفيديو'; console.error(x); }
+});
+document.addEventListener('click', (e) => { const b = e.target.closest('.imgclear'); if (b) { b.form[b.dataset.k || 'image'].value = ''; showPrev(b.form); } });
 const STATUS = { queued: 'بالانتظار', live: 'مباشر', sold: 'بيعت', unsold: 'لم تُبع' };
 
 function start({ db, F }) {
