@@ -36,10 +36,10 @@
     <div class="adm-tabs" role="tablist">
       <button class="chip" data-t="members">الأعضاء والاعتماد</button>
       <button class="chip" data-t="auction" aria-pressed="true">المزاد</button>
-      <button class="chip" data-t="products">منتجات القطاعي</button>
+      <button class="chip" data-t="products">منتجات التجزئة</button>
       <button class="chip" data-t="wholesale">أسعار الجملة</button>
       <button class="chip" data-t="quotes">طلبات الجملة</button>
-      <button class="chip" data-t="orders">طلبات القطاعي</button>
+      <button class="chip" data-t="orders">طلبات التجزئة</button>
       <button class="chip" data-t="wins">الفائزون</button>
       <button class="chip" data-t="chats">أرشيف المحادثات</button>
       <button class="chip" data-t="settings">الإعدادات</button>
@@ -101,7 +101,7 @@
         <label class="field">أكثر من 20 كجم<input name="p3" type="number"></label>
         <button class="btn btn-gold btn-sm">حفظ</button></form></aside></div></section>
 
-    <section data-p="quotes" class="hidden"><div class="panel"><h3>طلبات عروض الجملة</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنشأة</th><th>الجوال</th><th>المنتج</th><th>الكمية</th><th>ملاحظات</th><th>الحالة</th></tr></thead><tbody id="qRows"></tbody></table></div></div></section>
+    <section data-p="quotes" class="hidden"><div class="panel"><h3>طلبات عروض الجملة</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنشأة</th><th>الجوال</th><th>المنتج</th><th>الكمية</th><th>ملاحظات</th><th>قيمة البيع</th><th>عمولة 5%</th><th>الحالة</th></tr></thead><tbody id="qRows"></tbody></table></div><p class="muted" id="qSum" style="margin-top:10px"></p></div></section>
     <section data-p="wins" class="hidden"><div class="panel"><h3>الفائزون في المزاد</h3>
       <div id="comSum" class="msg ok" style="margin-bottom:12px"></div>
       <p class="muted" style="margin:-4px 0 12px;font-size:14px">تُسجَّل الترسية تلقائياً عند انتهاء الوقت. أرسل للفائز رسالة التهنئة وبيانات التحويل، ثم حدّث الحالة عند استلام المبلغ.</p>
@@ -119,7 +119,7 @@
     </div></section>
     <section data-p="settings" class="hidden"><form class="panel form" id="setForm" style="max-width:640px">
       <h3>عمولة المنصة</h3>
-      <label class="field">نسبة المنصة على التاجر عند البيع (%)<input name="commission" type="number" min="0" max="100" step="0.5" value="5"></label>
+      <p class="msg ok" style="margin:0 0 6px">عمولة المنصة ثابتة <b>5%</b> على كل المبيعات: المزاد المباشر، والجملة، والتجزئة.</p>
       <h3 style="margin-top:10px">بيانات التحويل للفائزين</h3>
       <label class="field">اسم البنك<input name="bank" placeholder="مثال: مصرف الراجحي"></label>
       <label class="field">اسم صاحب الحساب<input name="accountName"></label>
@@ -132,7 +132,7 @@
       <label class="field">السجل التجاري<input name="cr" inputmode="numeric"></label>
       <button class="btn btn-gold">حفظ الإعدادات</button>
     </form></section>
-    <section data-p="orders" class="hidden"><div class="panel"><h3>طلبات القطاعي</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>العميل</th><th>الجوال</th><th>العنوان</th><th>المنتجات</th><th>الحالة</th></tr></thead><tbody id="oRows"></tbody></table></div></div></section>
+    <section data-p="orders" class="hidden"><div class="panel"><h3>طلبات التجزئة</h3><div class="table-box"><table><thead><tr><th>التاريخ</th><th>العميل</th><th>الجوال</th><th>العنوان</th><th>المنتجات</th><th>قيمة البيع</th><th>عمولة 5%</th><th>الحالة</th></tr></thead><tbody id="oRows"></tbody></table></div><p class="muted" id="oSum" style="margin-top:10px"></p></div></section>
   </div>
 </main>
 <script type="module">
@@ -233,7 +233,7 @@ function start({ db, F }) {
       if (!d || d.status !== 'live') return;
       const sold = !forceUnsold && !!d.leaderUid;
       tx.update(ref, { status: sold ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
-      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: +SET.commission || 5, seller: auction.title || '', status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
+      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: 5, seller: auction.title || '', status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
       res = sold ? d.leaderPaddle : 0;
     });
     if (res !== null) toast(res ? 'رُسّيت على المضرب ' + res : 'انتهت بدون بيع');
@@ -333,10 +333,10 @@ function start({ db, F }) {
   // الإعدادات
   let SET = { ...PAYMENT };
   watchSettings((s) => { SET = s; const f = $('setForm'); if (document.activeElement && f.contains(document.activeElement)) return;
-    ['commission', 'bank', 'accountName', 'iban', 'days', 'whatsapp', 'whatsappIntl', 'email', 'cr'].forEach((k) => { const v = s[k] ?? ''; f[k].value = String(v).startsWith('[') ? '' : v; }); });
+    ['bank', 'accountName', 'iban', 'days', 'whatsapp', 'whatsappIntl', 'email', 'cr'].forEach((k) => { const v = s[k] ?? ''; f[k].value = String(v).startsWith('[') ? '' : v; }); });
   $('setForm').onsubmit = async (e) => {
     e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
-    d.days = +d.days || 2; d.commission = d.commission === '' ? 5 : +d.commission; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
+    d.days = +d.days || 2; d.commission = 5; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
     await saveSettings(d); toast('حُفظت الإعدادات');
   };
 
@@ -349,12 +349,12 @@ function start({ db, F }) {
     wins = q.docs.map((d) => ({ id: d.id, ...d.data() }));
     await Promise.all(wins.map((w) => userOf(w.uid)));
     const done = wins.filter((w) => ['paid', 'delivered'].includes(w.status));
-    const com = (w) => (w.amount || 0) * (w.commissionPct ?? SET.commission ?? 5) / 100;
-    $('comSum').innerHTML = `عمولة المنصة (${SET.commission ?? 5}%) — المستحقة من المبيعات المكتملة: <b>${fmt(Math.round(done.reduce((s, w) => s + com(w), 0)))} ريال</b> • المتوقعة من كل الترسيات: <b>${fmt(Math.round(wins.filter((w) => w.status !== 'cancelled').reduce((s, w) => s + com(w), 0)))} ريال</b>`;
+    const com = (w) => (w.amount || 0) * 5 / 100;
+    $('comSum').innerHTML = `عمولة المنصة (5%) — المستحقة من المبيعات المكتملة: <b>${fmt(Math.round(done.reduce((s, w) => s + com(w), 0)))} ريال</b> • المتوقعة من كل الترسيات: <b>${fmt(Math.round(wins.filter((w) => w.status !== 'cancelled').reduce((s, w) => s + com(w), 0)))} ريال</b>`;
     $('winRows').innerHTML = wins.map((w) => { const u = users[w.uid] || {};
       const msg = `مبروك ${u.name || ''}! رسا عليك مزاد «${w.lotName}» في المعتق للعود بمبلغ ${fmt(w.amount)} ريال (مضربك ${w.paddle}).\nنرجو التحويل خلال ${SET.days} يوم:\nالبنك: ${SET.bank}\nاسم الحساب: ${SET.accountName}\nالآيبان: ${SET.iban}\nوارفع صورة الإيصال من صفحة المزاد، أو أرسلها هنا.`;
       const wa = u.phone ? `https://wa.me/966${String(u.phone).replace(/^0/, '')}?text=${encodeURIComponent(msg)}` : '';
-      return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td><td class="gold"><b>${fmt(Math.round((w.amount || 0) * (w.commissionPct ?? SET.commission ?? 5)) / 100)}</b><div class="muted" style="font-size:12px">${w.commissionPct ?? SET.commission ?? 5}%</div></td><td>${fmt(Math.round((w.amount || 0) * (100 - (w.commissionPct ?? SET.commission ?? 5))) / 100)}</td>
+      return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td><td class="gold"><b>${fmt(Math.round((w.amount || 0) * 5) / 100)}</b><div class="muted" style="font-size:12px">5%</div></td><td>${fmt(Math.round((w.amount || 0) * (100 - 5)) / 100)}</td>
         <td>${w.receipt ? `<button class="btn btn-line" data-rc="${w.id}">عرض</button>` : '<span class="muted">—</span>'}</td>
         <td><select data-c="wins" data-id="${w.id}" style="height:36px;border-radius:8px;border:1px solid var(--line2)">${WST.map(([k, l]) => `<option value="${k}" ${w.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
         <td>${wa ? `<a class="btn btn-gold" href="${wa}" target="_blank" rel="noopener">رسالة مبروك</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="10" class="muted">لا يوجد فائزون بعد.</td></tr>';
@@ -367,12 +367,22 @@ function start({ db, F }) {
   };
 
   const statusSel = (coll, id, v) => `<select data-c="${coll}" data-id="${id}" style="height:36px;border-radius:8px;border:1px solid var(--line2)">${[['new', 'جديد'], ['contacted', 'تم التواصل'], ['done', 'مكتمل'], ['cancelled', 'ملغي']].map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  // عمولة 5% ثابتة على الجملة والتجزئة: يُدخل المدير قيمة البيع النهائية وتُحسب العمولة تلقائياً
+  const amtIn = (coll, id, v) => `<input type="number" min="0" step="1" data-amt="${coll}" data-id="${id}" value="${v ?? ''}" placeholder="ريال" style="width:110px;height:36px;border-radius:8px;border:1px solid var(--line2);padding:0 8px">`;
+  const comTd = (v) => `<td class="gold"><b>${v ? fmt(Math.round(v * 5) / 100) : '—'}</b></td>`;
+  const sumLine = (rows) => { const live = rows.filter((x) => x.status !== 'cancelled' && +x.saleAmount > 0); const done = live.filter((x) => x.status === 'done'); const c = (a) => fmt(Math.round(a.reduce((t, x) => t + +x.saleAmount, 0) * 5) / 100); return `عمولة المنصة (5%) — المستحقة من الطلبات المكتملة: <b>${c(done)} ريال</b> • المتوقعة من كل الطلبات: <b>${c(live)} ريال</b>`; };
+  const cartTotal = (x) => (x.items || []).every((i) => i.price != null) ? (x.items || []).reduce((a, i) => a + i.price * i.qty, 0) : null;
   F.onSnapshot(F.query(col('quotes'), F.orderBy('createdAt', 'desc'), F.limit(200)), (q) => {
-    $('qRows').innerHTML = q.docs.map((d) => { const x = d.data(); return `<tr><td>${dt(x.createdAt)}</td><td>${esc(x.company)}<div class="muted" style="font-size:12px">${esc(x.cr)}</div></td><td><a href="https://wa.me/966${esc(String(x.phone).slice(1))}">${esc(x.phone)}</a></td><td>${esc(x.product)}</td><td>${esc(x.qty)}</td><td>${esc(x.notes)}</td><td>${statusSel('quotes', d.id, x.status)}</td></tr>`; }).join('') || '<tr><td colspan="7" class="muted">لا توجد طلبات.</td></tr>';
+    const rows = q.docs.map((d) => ({ id: d.id, ...d.data() }));
+    $('qRows').innerHTML = rows.map((x) => `<tr><td>${dt(x.createdAt)}</td><td>${esc(x.company)}<div class="muted" style="font-size:12px">${esc(x.cr)}</div></td><td><a href="https://wa.me/966${esc(String(x.phone).slice(1))}">${esc(x.phone)}</a></td><td>${esc(x.product)}</td><td>${esc(x.qty)}</td><td>${esc(x.notes)}</td><td>${amtIn('quotes', x.id, x.saleAmount)}</td>${comTd(+x.saleAmount)}<td>${statusSel('quotes', x.id, x.status)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">لا توجد طلبات.</td></tr>';
+    $('qSum').innerHTML = sumLine(rows);
   });
   F.onSnapshot(F.query(col('orders'), F.orderBy('createdAt', 'desc'), F.limit(200)), (q) => {
-    $('oRows').innerHTML = q.docs.map((d) => { const x = d.data(); return `<tr><td>${dt(x.createdAt)}</td><td>${esc(x.name)}</td><td><a href="https://wa.me/966${esc(String(x.phone).slice(1))}">${esc(x.phone)}</a></td><td>${esc(x.city)} — ${esc(x.address)}</td><td>${(x.items || []).map((i) => esc(i.name) + ' × ' + i.qty).join('<br>')}</td><td>${statusSel('orders', d.id, x.status)}</td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">لا توجد طلبات.</td></tr>';
+    const rows = q.docs.map((d) => { const x = { id: d.id, ...d.data() }; if (x.saleAmount == null) x.saleAmount = cartTotal(x); return x; });
+    $('oRows').innerHTML = rows.map((x) => `<tr><td>${dt(x.createdAt)}</td><td>${esc(x.name)}</td><td><a href="https://wa.me/966${esc(String(x.phone).slice(1))}">${esc(x.phone)}</a></td><td>${esc(x.city)} — ${esc(x.address)}</td><td>${(x.items || []).map((i) => esc(i.name) + ' × ' + i.qty).join('<br>')}</td><td>${amtIn('orders', x.id, x.saleAmount)}</td>${comTd(+x.saleAmount)}<td>${statusSel('orders', x.id, x.status)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">لا توجد طلبات.</td></tr>';
+    $('oSum').innerHTML = sumLine(rows);
   });
+  document.addEventListener('change', (e) => { const a = e.target.closest('input[data-amt]'); if (a) { const v = +a.value || 0; F.updateDoc(F.doc(db, a.dataset.amt, a.dataset.id), { saleAmount: v, commissionPct: 5, commission: Math.round(v * 5) / 100 }).then(() => toast('تم حفظ قيمة البيع والعمولة')); } });
   document.addEventListener('change', (e) => { const s = e.target.closest('select[data-c]'); if (s) F.updateDoc(F.doc(db, s.dataset.c, s.dataset.id), { status: s.value }).then(() => toast('تم التحديث')); });
 }
 </script>

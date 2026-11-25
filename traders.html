@@ -101,7 +101,7 @@
               <input name="video" type="url" dir="ltr" style="text-align:left" placeholder="أو الصق رابط يوتيوب">
             </div>
             <div class="msg hidden" id="lfMsg"></div>
-            <p class="muted" style="margin:0;font-size:13px" id="comNote">عمولة المنصة 5% على التاجر عند إتمام البيع.</p>
+            <p class="muted" style="margin:0;font-size:13px" id="comNote">عمولة المنصة 5% ثابتة على كل بيع: المزاد والجملة والتجزئة.</p>
             <button class="btn btn-gold" type="submit">حفظ المنتج</button>
             <button class="btn btn-line btn-sm hidden" type="button" id="lfReset">إلغاء التعديل</button>
           </form>
@@ -131,7 +131,7 @@ onCurrentUser((u) => {
 
 // تعهد دفع عمولة المنصة
 var COM = 5;
-watchSettings((s) => { COM = +s.commission || 5; const n = document.getElementById('comNote'); if (n) n.textContent = `عمولة المنصة ${COM}% على التاجر عند إتمام البيع.`; });
+// العمولة ثابتة 5% على المزاد والجملة والتجزئة
 const pledged = () => currentUser && currentUser.pledgeAt && (currentUser.pledgePct == null || +currentUser.pledgePct === +COM);
 function askPledge() {
   return new Promise((resolve) => {
@@ -140,7 +140,7 @@ function askPledge() {
     o.innerHTML = `<div class="modal pledge" role="dialog" aria-modal="true" aria-labelledby="plT">
       <h2 id="plT" style="text-align:center">تعهد دفع عمولة المنصة</h2>
       <p class="pl-ayah">قال الله تعالى: ﴿وَأَوْفُوا بِالْعَهْدِ ۖ إِنَّ الْعَهْدَ كَانَ مَسْئُولًا﴾</p>
-      <p style="line-height:2">أتعهد وأقسم بالله أنا التاجر <b>${esc(currentUser.company || currentUser.name || '')}</b> أن أدفع عمولة منصة <b>المعتق للعود</b> وقدرها <b class="gold">${COM}% من قيمة البيع</b>، سواء تم البيع عن طريق المنصة أو بسببها، وأن أسدّد العمولة خلال <b>10 أيام</b> من استلام قيمة البيع.</p>
+      <p style="line-height:2">أتعهد وأقسم بالله أنا التاجر <b>${esc(currentUser.company || currentUser.name || '')}</b> أن أدفع عمولة منصة <b>المعتق للعود</b> وقدرها <b class="gold">${COM}% من قيمة البيع</b> في المزاد أو الجملة أو التجزئة، سواء تم البيع عن طريق المنصة أو بسببها، وأن أسدّد العمولة خلال <b>10 أيام</b> من استلام قيمة البيع.</p>
       <p style="line-height:2;margin-top:0">وأُقرّ بأن هذه العمولة أمانة في ذمتي، وأن عدم سدادها يحق للمنصة معه إيقاف حسابي وحذف منتجاتي.</p>
       <label class="pl-chk"><input type="checkbox" id="plOk"> أتعهد بذلك وأوافق على <a href="terms.html" target="_blank">شروط المنصة</a></label>
       <div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-gold" id="plYes" disabled style="flex:1">أتعهد وأوافق</button><button class="btn btn-line" id="plNo">إلغاء</button></div>

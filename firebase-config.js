@@ -25,7 +25,7 @@ export const PAYMENT = {
   accountName: "[اسم صاحب الحساب]",
   iban: "[رقم الآيبان SA...]",
   days: 2,                         // مهلة التحويل بالأيام
-  commission: 5                    // نسبة المنصة % على التاجر عند البيع
+  commission: 5                    // عمولة المنصة ثابتة 5% (المزاد + الجملة + التجزئة)
 };
 
 // بيانات التواصل
@@ -42,3 +42,6 @@ export const CLOUDINARY = {
   cloudName: "ea4rk7u2",
   uploadPreset: "almutiqoud"
 };
+
+// عمولة المنصة الثابتة على كل المبيعات: المزاد والجملة والتجزئة
+export const COMMISSION = 5;
