@@ -137,7 +137,7 @@ export function openAuth(mode = 'in') {
     try {
       if (mode === 'up') { await signUp({ name: d.name.trim(), phone: d.phone.replace(/[\s-]/g, ''), password: d.password }); close(); toast('أهلاً بك في المعتق'); }
       else { await signIn(d.phone, d.password); close(); toast('تم الدخول'); }
-    } catch (x) { err.textContent = authMsg(x); err.classList.remove('hidden'); }
+    } catch (x) { console.error(x); err.textContent = authMsg(x) + (x.code ? ` (${x.code})` : ''); err.classList.remove('hidden'); }
     finally { sub.disabled = false; }
   };
 }
@@ -166,7 +166,10 @@ function authMsg(x) {
   const c = x.code || '';
   if (c.includes('email-already')) return 'هذا الرقم مسجل مسبقاً — جرّب الدخول';
   if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'رقم الجوال أو رمز الدخول غير صحيح';
-  if (c.includes('weak-password')) return 'كلمة المرور ضعيفة';
+  if (c.includes('weak-password')) return 'رمز الدخول ضعيف';
+  if (c === 'timeout' || c.includes('network')) return 'الاتصال بطيء أو مقطوع — تأكد من الإنترنت وحاول مرة أخرى';
+  if (c.includes('too-many-requests')) return 'محاولات كثيرة — انتظر دقيقة ثم حاول';
+  if (c.includes('invalid-email')) return 'البريد أو الرقم غير صحيح';
   return x.message || 'حدث خطأ، حاول مرة أخرى';
 }
 

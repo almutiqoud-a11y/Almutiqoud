@@ -5,17 +5,35 @@ export const DEMO = !firebaseConfig.apiKey;
 const V = '10.12.2';
 let fb = null; // { auth, db, m: modules }
 
+// تحميل Firebase مرة واحدة فقط (حتى لو طلبته عدة أجزاء من الصفحة في نفس اللحظة)
+let initP = null;
 async function init() {
-  if (DEMO || fb) return fb;
-  const [app, auth, fs, st] = await Promise.all([
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`),
-    import(`https://www.gstatic.com/firebasejs/${V}/firebase-storage.js`)
-  ]).then((r) => r);
-  const a = app.initializeApp(firebaseConfig);
-  fb = { auth: auth.getAuth(a), db: fs.getFirestore(a), A: auth, F: fs, app: a, S: st, storage: st.getStorage(a) };
-  return fb;
+  if (DEMO) return null;
+  if (fb) return fb;
+  if (!initP) initP = (async () => {
+    const [app, auth, fs] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
+      import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`)
+    ]);
+    const a = app.getApps().length ? app.getApp() : app.initializeApp(firebaseConfig);
+    let au;
+    try { au = auth.initializeAuth(a, { persistence: [auth.indexedDBLocalPersistence, auth.browserLocalPersistence, auth.inMemoryPersistence] }); }
+    catch { au = auth.getAuth(a); }
+    fb = { auth: au, db: fs.getFirestore(a), A: auth, F: fs, app: a };
+    return fb;
+  })().catch((e) => { initP = null; throw e; });
+  return initP;
+}
+// التخزين يُحمَّل عند الحاجة فقط، فلا يعطّل الدخول أو المزاد
+async function initStorage() {
+  const f = await init();
+  if (!f.S) { f.S = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-storage.js`); f.storage = f.S.getStorage(f.app); }
+  return f;
+}
+// مهلة لأي عملية شبكة حتى لا «تعلق» الأزرار
+export function withTimeout(p, ms = 20000) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'timeout' })), ms))]);
 }
 
 /* ---------------- بيانات العرض ---------------- */
@@ -80,8 +98,9 @@ async function emitUser() {
   if (DEMO) return userCb(demo.user);
   const { db, F } = await init(); const u = lastAuth;
   if (!u) return userCb(null);
-  const snap = await F.getDoc(F.doc(db, 'users', u.uid));
-  const d = snap.exists() ? snap.data() : {};
+  let d = {};
+  try { const snap = await withTimeout(F.getDoc(F.doc(db, 'users', u.uid)), 15000); d = snap.exists() ? snap.data() : {}; }
+  catch (e) { console.error('profile read failed', e); }
   userCb({ uid: u.uid, email: u.email, name: d.name || u.displayName || '', phone: d.phone || '', paddle: d.paddle || null,
     type: d.type || '', docNo: d.docNo || '', company: d.company || '', country: d.country || '', city: d.city || '',
     status: d.status || '', isAdmin: ADMIN_EMAILS.includes(u.email) });
@@ -99,8 +118,8 @@ export const phoneKey = (p) => { p = String(p || '').replace(/[^\d]/g, ''); if (
 const phoneEmail = (p) => 'p' + phoneKey(p) + '@almutiqoud.app';
 export async function signUp({ name, phone, password }) {
   if (DEMO) { demo.user = { uid: 'me', name, phone, email: '', paddle: 42, isAdmin: false, type: '', status: 'basic' }; demoEmit(); return demo.user; }
-  const { auth, A, db, F } = await init();
-  const cred = await A.createUserWithEmailAndPassword(auth, phoneEmail(phone), password);
+  const { auth, A, db, F } = await withTimeout(init());
+  const cred = await withTimeout(A.createUserWithEmailAndPassword(auth, phoneEmail(phone), password));
   await A.updateProfile(cred.user, { displayName: name });
   await F.runTransaction(db, async (tx) => {
     const cRef = F.doc(db, 'counters', 'paddles');
@@ -125,8 +144,8 @@ export async function completeProfile(uid, data) {
 export async function signIn(id, password) {
   const email = String(id).includes('@') ? String(id).trim() : phoneEmail(id);
   if (DEMO) { demo.user = { uid: 'me', name: 'زائر', email, paddle: 42, isAdmin: email.startsWith('admin'), type: 'individual', docNo: 'FL-0000', country: 'السعودية', status: 'approved' }; demoEmit(); return; }
-  const { auth, A } = await init();
-  await A.signInWithEmailAndPassword(auth, email, password);
+  const { auth, A } = await withTimeout(init());
+  await withTimeout(A.signInWithEmailAndPassword(auth, email, password));
 }
 
 export async function resetPassword(email) {
@@ -374,7 +393,7 @@ function dataUrlToBlob(u) { const [h, b] = u.split(','); const mime = h.match(/:
 export async function uploadMedia(folder, fileOrDataUrl, onProgress) {
   const blob = typeof fileOrDataUrl === 'string' ? dataUrlToBlob(fileOrDataUrl) : fileOrDataUrl;
   if (DEMO) return typeof fileOrDataUrl === 'string' ? fileOrDataUrl : URL.createObjectURL(blob);
-  const { storage, S, auth } = await init();
+  const { storage, S, auth } = await initStorage();
   const uid = auth.currentUser?.uid || 'anon';
   const ext = (blob.type.split('/')[1] || 'bin').replace('quicktime', 'mov').replace('jpeg', 'jpg');
   const path = `${folder}/${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
