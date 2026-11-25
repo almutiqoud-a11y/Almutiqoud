@@ -64,7 +64,7 @@ document.body.insertAdjacentHTML('beforeend', `
 function renderUserArea() {
   const el = document.getElementById('userArea'); if (!el) return;
   const u = currentUser;
-  if (!u) { el.innerHTML = '<span style="display:flex;gap:8px;align-items:center"><span class="visitor-chip" title="أنت تتصفح كزائر"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>زائر</span><button class="btn btn-gold btn-sm" id="loginBtn">تسجيل الدخول</button></span>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
+  if (!u) { el.innerHTML = '<span style="display:flex;gap:8px;align-items:center"><button class="btn btn-gold btn-sm" id="loginBtn">تسجيل الدخول</button></span>'; el.querySelector('#loginBtn').onclick = () => openAuth(); return; }
   el.innerHTML = `<span style="display:flex;gap:8px;align-items:center">
     ${u.paddle ? `<span class="paddle-chip" title="رقم مزايدتك"><b>${u.paddle}</b>رقمك</span>` : ''}
     <a class="icon-btn" href="messages.html" aria-label="الرسائل" title="الرسائل"><svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4V5Z"/></svg></a>

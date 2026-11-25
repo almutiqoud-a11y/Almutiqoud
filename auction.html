@@ -31,7 +31,9 @@
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
       <div class="photo"><img src="hall-v17.jpg" alt="قاعة مزاد المعتق للعود">
+      <div class="hall-intro" id="hallIntro" aria-hidden="true"></div>
       <div class="scr" aria-live="polite">
+        <div class="hallnm" id="scrHall"></div>
         <div class="top"><b id="lotName">—</b><span style="display:flex;gap:1.5cqw;align-items:center;flex:none"><span id="lotOf" style="color:#6B5236"></span><span class="lv" id="liveBadge">مباشر</span></span></div>
         <div class="now"><small>السعر الحالي</small><strong><span id="price">—</span> <span class="u">ريال</span></strong><em>آخر مزايدة من الرقم <b id="leader1">—</b></em></div>
         <div class="tbl">
@@ -90,6 +92,14 @@ const $ = (id) => document.getElementById(id);
 // القاعة الحالية من الرابط: auction.html?hall=riyadh
 const HALL = hallOf(new URLSearchParams(location.search).get('hall')).id;
 document.title = hallOf(HALL).name + ' — مزاد المعتق للعود';
+$('scrHall').textContent = hallOf(HALL).name;
+// يظهر اسم القاعة بشكل كبير عند الدخول وعند بدء كل مزاد
+function showHall(sub) {
+  const el = $('hallIntro'); el.innerHTML = `<b>${hallOf(HALL).name}</b>${sub ? `<span>${sub}</span>` : ''}`;
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+}
+showHall('مرحباً بك');
+let lastLiveLot; // undefined = لم تصل أول قراءة بعد
 $('hallBar').innerHTML = HALLS.map((h) => `<a class="hb ${h.id === HALL ? 'on' : ''}" href="auction.html?hall=${h.id}" ${h.id === HALL ? 'aria-current="page"' : ''}><img src="${h.img}" alt="">${h.name}</a>`).join('');
 const MOBSEATS = [{ x: 65.92, b: 42.86, h: 1 }, { x: 28.56, b: 45.24, h: 1 }, { x: 44.84, b: 39.52, h: 1 }, { x: 89.24, b: 37.62, h: 0 }, { x: 10.90, b: 41.90, h: 0 }, { x: 93.90, b: 42.86, h: 0 }];
 const SEATS = [
@@ -109,6 +119,9 @@ watchAuction(async (a) => {
   $('hallState').textContent = !a ? 'لا يوجد مزاد في هذه القاعة حالياً' : a.status === 'live' ? (a.title ? 'المزاد مباشر الآن — ' + a.title : 'المزاد مباشر الآن') : a.startAt && a.status !== 'ended' ? 'المزاد القادم: ' + new Date(a.startAt).toLocaleString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }) : 'لا يوجد مزاد في هذه القاعة حالياً';
   lotTotal = a?.lotTotal || 0; auTitle = a?.title || '';
   const id = a?.currentLotId || null;
+  const liveId = a?.status === 'live' ? id : null;
+  if (lastLiveLot !== undefined && liveId && liveId !== lastLiveLot) showHall('بدأ المزاد');
+  lastLiveLot = liveId;
   if (id === curId) return;
   curId = id; unLot && unLot(); unBids && unBids();
   if (!id) { lot = null; bids = []; paint(); paintPaddles(); return; }
