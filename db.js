@@ -103,7 +103,7 @@ async function emitUser() {
   catch (e) { console.error('profile read failed', e); }
   userCb({ uid: u.uid, email: u.email, name: d.name || u.displayName || '', phone: d.phone || '', paddle: d.paddle || null,
     type: d.type || '', docNo: d.docNo || '', company: d.company || '', country: d.country || '', city: d.city || '',
-    status: d.status || '', isAdmin: ADMIN_EMAILS.includes(u.email) });
+    status: d.status || '', pledgeAt: d.pledgeAt || null, pledgePct: d.pledgePct ?? null, isAdmin: ADMIN_EMAILS.includes(u.email) });
 }
 export async function onUser(cb) {
   userCb = cb;
@@ -300,7 +300,7 @@ export async function uploadReceipt(lotId, dataUrl) {
 /* ---------------- إعدادات الموقع (البنك والتواصل) ---------------- */
 // تُعبّأ من لوحة التحكم › الإعدادات، وتُستخدم قيم firebase-config.js إن كانت فارغة
 import { PAYMENT as P0, CONTACT as C0 } from './firebase-config.js';
-const defaults = () => ({ commission: P0.commission ?? 10, bank: P0.bank, accountName: P0.accountName, iban: P0.iban, days: P0.days, whatsapp: C0.whatsapp, whatsappIntl: C0.whatsappIntl, email: C0.email, cr: C0.cr });
+const defaults = () => ({ commission: P0.commission ?? 5, bank: P0.bank, accountName: P0.accountName, iban: P0.iban, days: P0.days, whatsapp: C0.whatsapp, whatsappIntl: C0.whatsappIntl, email: C0.email, cr: C0.cr });
 export async function watchSettings(cb) {
   if (DEMO) { cb(defaults()); return () => {}; }
   const { db, F } = await init();
@@ -425,4 +425,12 @@ function uploadCloudinary(folder, blob, onProgress) {
     x.onerror = () => rej(new Error('network'));
     x.send(fd);
   });
+}
+
+// تعهد التاجر بدفع عمولة المنصة (يُحفظ في حسابه مع النسبة وتاريخ الموافقة)
+export async function savePledge(user, pct) {
+  if (DEMO) { Object.assign(demo.user || {}, { pledgeAt: Date.now(), pledgePct: pct }); demoEmit(); return; }
+  const { db, F } = await init();
+  await F.updateDoc(F.doc(db, 'users', user.uid), { pledgeAt: Date.now(), pledgePct: pct });
+  user.pledgeAt = Date.now(); user.pledgePct = pct;
 }

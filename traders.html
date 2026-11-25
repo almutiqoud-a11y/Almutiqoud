@@ -30,6 +30,10 @@
 .vid{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;margin:8px 18px 0}
 .vid.tall{aspect-ratio:9/16;width:220px;max-width:calc(100% - 36px);margin:8px auto 0}
 .vid iframe,.vid video{position:absolute;inset:0;width:100%;height:100%;border:0}
+.pledge{max-width:520px}
+.pl-ayah{text-align:center;font-family:var(--fh);font-size:19px;color:var(--gold-dark);background:var(--soft);border-radius:12px;padding:10px;margin:0 0 12px}
+.pl-chk{display:flex;gap:10px;align-items:flex-start;font-weight:600;background:#FBF3E2;border:1px solid var(--gold);border-radius:12px;padding:12px}
+.pl-chk input{width:20px;height:20px;accent-color:var(--gold);flex:none;margin-top:3px}
 </style>
 </head>
 <body data-page="traders">
@@ -92,7 +96,7 @@
               <input name="video" type="url" dir="ltr" style="text-align:left" placeholder="أو الصق رابط يوتيوب">
             </div>
             <div class="msg hidden" id="lfMsg"></div>
-            <p class="muted" style="margin:0;font-size:13px">عمولة المنصة 10% على التاجر عند إتمام البيع.</p>
+            <p class="muted" style="margin:0;font-size:13px" id="comNote">عمولة المنصة 5% على التاجر عند إتمام البيع.</p>
             <button class="btn btn-gold" type="submit">حفظ المنتج</button>
             <button class="btn btn-line btn-sm hidden" type="button" id="lfReset">إلغاء التعديل</button>
           </form>
@@ -103,7 +107,8 @@
 </main>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, openCompleteProfile, esc, fmt, toast, shrinkImage, COUNTRIES } from './layout.js';
-import { getDirectory, getListings, saveListing, deleteListing, openChat, uploadMedia, MAX_VIDEO_MB } from './db.js';
+import { getDirectory, getListings, saveListing, deleteListing, openChat, uploadMedia, MAX_VIDEO_MB, savePledge, watchSettings } from './db.js';
+import { icons } from './layout.js';
 const $ = (id) => document.getElementById(id);
 var started = false, dir = [], lst = [], imgs = [];
 
@@ -119,8 +124,36 @@ onCurrentUser((u) => {
   if (ok && !started) { started = true; load(); }
 });
 
-document.querySelector('.tr-tabs').onclick = (e) => {
+// تعهد دفع عمولة المنصة
+var COM = 5;
+watchSettings((s) => { COM = +s.commission || 5; const n = document.getElementById('comNote'); if (n) n.textContent = `عمولة المنصة ${COM}% على التاجر عند إتمام البيع.`; });
+const pledged = () => currentUser && currentUser.pledgeAt && (currentUser.pledgePct == null || +currentUser.pledgePct === +COM);
+function askPledge() {
+  return new Promise((resolve) => {
+    if (pledged() || currentUser?.isAdmin) return resolve(true);
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="modal pledge" role="dialog" aria-modal="true" aria-labelledby="plT">
+      <h2 id="plT" style="text-align:center">تعهد دفع عمولة المنصة</h2>
+      <p class="pl-ayah">قال الله تعالى: ﴿وَأَوْفُوا بِالْعَهْدِ ۖ إِنَّ الْعَهْدَ كَانَ مَسْئُولًا﴾</p>
+      <p style="line-height:2">أتعهد وأقسم بالله أنا التاجر <b>${esc(currentUser.company || currentUser.name || '')}</b> أن أدفع عمولة منصة <b>المعتق للعود</b> وقدرها <b class="gold">${COM}% من قيمة البيع</b>، سواء تم البيع عن طريق المنصة أو بسببها، وأن أسدّد العمولة خلال <b>10 أيام</b> من استلام قيمة البيع.</p>
+      <p style="line-height:2;margin-top:0">وأُقرّ بأن هذه العمولة أمانة في ذمتي، وأن عدم سدادها يحق للمنصة معه إيقاف حسابي وحذف منتجاتي.</p>
+      <label class="pl-chk"><input type="checkbox" id="plOk"> أتعهد بذلك وأوافق على <a href="terms.html" target="_blank">شروط المنصة</a></label>
+      <div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-gold" id="plYes" disabled style="flex:1">أتعهد وأوافق</button><button class="btn btn-line" id="plNo">إلغاء</button></div>
+    </div>`;
+    document.body.appendChild(o);
+    o.querySelector('#plOk').onchange = (e) => (o.querySelector('#plYes').disabled = !e.target.checked);
+    o.querySelector('#plNo').onclick = () => { o.remove(); resolve(false); };
+    o.querySelector('#plYes').onclick = async () => {
+      o.querySelector('#plYes').disabled = true;
+      try { await savePledge(currentUser, COM); o.remove(); toast('شكراً لك — تم حفظ التعهد'); resolve(true); }
+      catch (x) { console.error(x); toast('تعذّر حفظ التعهد، حاول مرة أخرى'); o.querySelector('#plYes').disabled = false; }
+    };
+  });
+}
+
+document.querySelector('.tr-tabs').onclick = async (e) => {
   const b = e.target.closest('button[data-t]'); if (!b) return;
+  if (b.dataset.t === 'mine' && !(await askPledge())) return;
   document.querySelectorAll('.tr-tabs button').forEach((x) => x.setAttribute('aria-pressed', x === b));
   document.querySelectorAll('section[data-p]').forEach((s) => s.classList.toggle('hidden', s.dataset.p !== b.dataset.t));
 };
@@ -226,6 +259,7 @@ $('lf').onsubmit = async (e) => {
   const d = { name: f.name.value.trim(), desc: f.desc.value.trim(), price: f.price.value === '' ? null : +f.price.value, unit: f.unit.value, video: f.video.value.trim(), images: imgs.slice(0, 4) };
   if (!d.name) { m.className = 'msg err'; m.textContent = 'اكتب اسم المنتج'; return; }
   if (!d.images.length) { m.className = 'msg err'; m.textContent = 'أضف صورة واحدة على الأقل'; return; }
+  if (!(await askPledge())) { m.className = 'msg err'; m.textContent = 'يلزم التعهد بدفع عمولة المنصة قبل عرض المنتج'; return; }
   f.querySelector('[type=submit]').disabled = true;
   try {
     m.className = 'msg ok'; m.textContent = 'جارٍ رفع الصور…';

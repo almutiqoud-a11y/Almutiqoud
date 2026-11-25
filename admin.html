@@ -114,7 +114,7 @@
     </div></section>
     <section data-p="settings" class="hidden"><form class="panel form" id="setForm" style="max-width:640px">
       <h3>عمولة المنصة</h3>
-      <label class="field">نسبة المنصة على التاجر عند البيع (%)<input name="commission" type="number" min="0" max="100" step="0.5" value="10"></label>
+      <label class="field">نسبة المنصة على التاجر عند البيع (%)<input name="commission" type="number" min="0" max="100" step="0.5" value="5"></label>
       <h3 style="margin-top:10px">بيانات التحويل للفائزين</h3>
       <label class="field">اسم البنك<input name="bank" placeholder="مثال: مصرف الراجحي"></label>
       <label class="field">اسم صاحب الحساب<input name="accountName"></label>
@@ -228,7 +228,7 @@ function start({ db, F }) {
       if (!d || d.status !== 'live') return;
       const sold = !forceUnsold && !!d.leaderUid;
       tx.update(ref, { status: sold ? 'sold' : 'unsold', endsAt: F.Timestamp.now() });
-      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: +SET.commission || 10, seller: auction.title || '', status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
+      if (sold) tx.set(F.doc(db, 'wins', l.id), { lotId: l.id, lotName: d.name, lotNo: d.no, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: +SET.commission || 5, seller: auction.title || '', status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + (SET.days || 2) * 864e5 });
       res = sold ? d.leaderPaddle : 0;
     });
     if (res !== null) toast(res ? 'رُسّيت على المضرب ' + res : 'انتهت بدون بيع');
@@ -331,7 +331,7 @@ function start({ db, F }) {
     ['commission', 'bank', 'accountName', 'iban', 'days', 'whatsapp', 'whatsappIntl', 'email', 'cr'].forEach((k) => { const v = s[k] ?? ''; f[k].value = String(v).startsWith('[') ? '' : v; }); });
   $('setForm').onsubmit = async (e) => {
     e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
-    d.days = +d.days || 2; d.commission = d.commission === '' ? 10 : +d.commission; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
+    d.days = +d.days || 2; d.commission = d.commission === '' ? 5 : +d.commission; d.whatsappIntl = (d.whatsappIntl || '').replace(/\D/g, '').replace(/^0/, '966');
     await saveSettings(d); toast('حُفظت الإعدادات');
   };
 
@@ -344,12 +344,12 @@ function start({ db, F }) {
     wins = q.docs.map((d) => ({ id: d.id, ...d.data() }));
     await Promise.all(wins.map((w) => userOf(w.uid)));
     const done = wins.filter((w) => ['paid', 'delivered'].includes(w.status));
-    const com = (w) => (w.amount || 0) * (w.commissionPct ?? SET.commission ?? 10) / 100;
-    $('comSum').innerHTML = `عمولة المنصة (${SET.commission ?? 10}%) — المستحقة من المبيعات المكتملة: <b>${fmt(Math.round(done.reduce((s, w) => s + com(w), 0)))} ريال</b> • المتوقعة من كل الترسيات: <b>${fmt(Math.round(wins.filter((w) => w.status !== 'cancelled').reduce((s, w) => s + com(w), 0)))} ريال</b>`;
+    const com = (w) => (w.amount || 0) * (w.commissionPct ?? SET.commission ?? 5) / 100;
+    $('comSum').innerHTML = `عمولة المنصة (${SET.commission ?? 5}%) — المستحقة من المبيعات المكتملة: <b>${fmt(Math.round(done.reduce((s, w) => s + com(w), 0)))} ريال</b> • المتوقعة من كل الترسيات: <b>${fmt(Math.round(wins.filter((w) => w.status !== 'cancelled').reduce((s, w) => s + com(w), 0)))} ريال</b>`;
     $('winRows').innerHTML = wins.map((w) => { const u = users[w.uid] || {};
       const msg = `مبروك ${u.name || ''}! رسا عليك مزاد «${w.lotName}» في المعتق للعود بمبلغ ${fmt(w.amount)} ريال (مضربك ${w.paddle}).\nنرجو التحويل خلال ${SET.days} يوم:\nالبنك: ${SET.bank}\nاسم الحساب: ${SET.accountName}\nالآيبان: ${SET.iban}\nوارفع صورة الإيصال من صفحة المزاد، أو أرسلها هنا.`;
       const wa = u.phone ? `https://wa.me/966${String(u.phone).replace(/^0/, '')}?text=${encodeURIComponent(msg)}` : '';
-      return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td><td class="gold"><b>${fmt(Math.round((w.amount || 0) * (w.commissionPct ?? SET.commission ?? 10)) / 100)}</b><div class="muted" style="font-size:12px">${w.commissionPct ?? SET.commission ?? 10}%</div></td><td>${fmt(Math.round((w.amount || 0) * (100 - (w.commissionPct ?? SET.commission ?? 10))) / 100)}</td>
+      return `<tr><td>${dt(w.createdAt)}</td><td>${esc(w.lotName)}</td><td><b>${esc(w.paddle)}</b></td><td>${esc(u.name || '—')}<div class="muted" style="font-size:12px">${esc(u.phone || '')} ${esc(u.email || '')}</div></td><td>${fmt(w.amount)}</td><td class="gold"><b>${fmt(Math.round((w.amount || 0) * (w.commissionPct ?? SET.commission ?? 5)) / 100)}</b><div class="muted" style="font-size:12px">${w.commissionPct ?? SET.commission ?? 5}%</div></td><td>${fmt(Math.round((w.amount || 0) * (100 - (w.commissionPct ?? SET.commission ?? 5))) / 100)}</td>
         <td>${w.receipt ? `<button class="btn btn-line" data-rc="${w.id}">عرض</button>` : '<span class="muted">—</span>'}</td>
         <td><select data-c="wins" data-id="${w.id}" style="height:36px;border-radius:8px;border:1px solid var(--line2)">${WST.map(([k, l]) => `<option value="${k}" ${w.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
         <td>${wa ? `<a class="btn btn-gold" href="${wa}" target="_blank" rel="noopener">رسالة مبروك</a>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="10" class="muted">لا يوجد فائزون بعد.</td></tr>';
