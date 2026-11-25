@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=36">
+<link rel="stylesheet" href="style.css?v=43">
 </head>
 <body data-page="auction">
 <div class="visitor-gate hidden" id="vGate"><div class="card">
@@ -54,7 +54,7 @@
     <main>
       <div class="panel hidden" id="media" style="margin-bottom:20px">
         <h2 style="margin-bottom:14px">صور وفيديو المنتج</h2>
-        <div class="media-grid"><img id="lotImg" class="hidden" alt="صورة المنتج"><div id="lotVid" class="hidden"></div></div>
+        <div class="lgal" id="lgal"></div>
       </div>
       <div class="panel"><div class="specs">
         <div><small>المنشأ</small><b id="sOrigin">—</b></div>
@@ -68,7 +68,7 @@
     </main>
     <aside>
       <section class="panel" aria-label="سجل المزايدات">
-        <h2>سجل المزايدات</h2>
+        <h2 id="logT">سجل المزايدات</h2>
         <div id="log"></div>
       </section>
     </aside>
@@ -76,7 +76,7 @@
 </div>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, fmt, esc, toast, shrinkImage, icons } from './layout.js';
-import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt, watchSettings } from './db.js';
+import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt, watchSettings, uploadMedia, updateLotMedia, MAX_VIDEO_MB } from './db.js';
 import { AUCTION, PAYMENT, CONTACT } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -102,8 +102,7 @@ watchAuction(async (a) => {
   if (!id) { lot = null; bids = []; paint(); paintPaddles(); return; }
   unLot = await watchLot(id, (l) => { lot = l; paint(); paintPaddles(); });
   unBids = await watchBids(id, (bs) => {
-    bids = bs;
-    $('log').innerHTML = bs.length ? bs.map((b) => `<div class="log-row"><span><span class="p">${esc(b.paddle)}</span><span class="muted" style="font-size:13px">${ago(b.at)}</span></span><b>${fmt(b.amount)} ريال</b></div>`).join('') : '<p class="muted">لا توجد مزايدات بعد — كن الأول.</p>';
+    bids = bs; drawLog();
     paintPaddles();
   });
 });
@@ -155,17 +154,38 @@ function videoHTML(u) {
   return `<a class="btn btn-line btn-sm" href="${esc(u)}" target="_blank" rel="noopener">شاهد فيديو المنتج</a>`;
 }
 var mediaKey = '';
+// سجل المزايدات: يختفي بعد انتهاء المزاد ولا يبقى إلا المزايدة التي رسا عليها
+var logKey = '';
+function drawLog() {
+  const closed = lot && (lot.status === 'sold' || lot.status === 'unsold' || (lot.endsAt && Date.now() >= lot.endsAt));
+  const key = (closed ? 'c' : 'o') + '|' + bids.length + '|' + (bids[0]?.amount || '') + '|' + (lot?.status || '');
+  if (key === logKey) return; logKey = key;
+  $('logT').textContent = closed ? 'نتيجة المزاد' : 'سجل المزايدات';
+  if (closed) {
+    const w = lot.status === 'unsold' || !lot.leaderPaddle ? null : { paddle: lot.leaderPaddle, amount: lot.currentPrice };
+    $('log').innerHTML = w ? `<div class="log-final"><span class="p">${esc(w.paddle)}</span><div><small>رسا المزاد على المضرب</small><b>${fmt(w.amount)} ريال</b></div></div>` : '<p class="muted">انتهى المزاد بدون بيع.</p>';
+    return;
+  }
+  $('log').innerHTML = bids.length ? bids.map((b) => `<div class="log-row"><span><span class="p">${esc(b.paddle)}</span><span class="muted" style="font-size:13px">${ago(b.at)}</span></span><b>${fmt(b.amount)} ريال</b></div>`).join('') : '<p class="muted">لا توجد مزايدات بعد — كن الأول.</p>';
+}
+
 function paintMedia() {
-  const key = lot ? lot.id + '|' + (lot.image || '').length + '|' + (lot.video || '') : '';
+  const F = ['image', 'image2', 'image3', 'image4'];
+  const imgs = lot ? F.map((k) => lot[k] || '') : ['', '', '', ''];
+  const adm = !!currentUser?.isAdmin;
+  const key = lot ? lot.id + '|' + imgs.join('|').length + '|' + (lot.video || '') + '|' + adm : '';
   if (key === mediaKey) return; mediaKey = key;
-  const img = $('lotImg'), vid = $('lotVid');
-  img.classList.toggle('hidden', !lot?.image); if (lot?.image) img.src = lot.image;
-  vid.innerHTML = videoHTML(lot?.video); vid.classList.toggle('hidden', !lot?.video);
-  $('media').classList.toggle('hidden', !(lot?.image || lot?.video));
+  // شكل L مقلوب: صورتان في الأعلى + صورتان على الجانب، والفيديو في المربع الكبير
+  const addBtn = (k, t) => adm ? `<label class="lg-add">${t}<input type="file" accept="${k === 'video' ? 'video/*' : 'image/*'}" data-k="${k}" class="hidden"></label>` : '';
+  const cell = (i) => `<div class="lg-c">${imgs[i] ? `<button type="button" class="lg-i" data-src="${esc(imgs[i])}" aria-label="تكبير الصورة ${i + 1}"><img src="${esc(imgs[i])}" alt="صورة المنتج ${i + 1}"></button>` : '<div class="lg-i lg-empty" aria-hidden="true"></div>'}${addBtn(F[i], imgs[i] ? '+ تغيير' : '+ صورة')}</div>`;
+  const first = imgs.find(Boolean);
+  const vid = lot?.video ? videoHTML(lot.video) : first ? `<img src="${esc(first)}" alt="صورة المنتج">` : '';
+  $('lgal').innerHTML = `${cell(0)}${cell(1)}${cell(2)}${cell(3)}<div class="lg-v">${vid}${addBtn('video', lot?.video ? '+ تغيير الفيديو' : '+ فيديو')}</div>`;
+  $('media').classList.toggle('hidden', !(adm && lot) && !(imgs.some(Boolean) || lot?.video));
 }
 
 function paint() {
-  paintMedia();
+  paintMedia(); drawLog();
   const u = currentUser;
   $('myPaddle').textContent = u?.paddle ?? '؟';
   if (!lot) {
@@ -225,6 +245,22 @@ $('bidBtn').onclick = async () => {
 
 /* ---------- الفائز: مبروك + التحويل + الإيصال ---------- */
 $('vUp').onclick = () => openAuth('up'); $('vIn').onclick = () => openAuth('in');
+document.getElementById('lgal').addEventListener('change', async (e) => {
+  const inp = e.target.closest('input[data-k]'); if (!inp || !inp.files[0] || !lot) return;
+  const k = inp.dataset.k, file = inp.files[0], lab = inp.closest('.lg-add'); inp.value = '';
+  try {
+    let src = file;
+    if (k === 'video') { if (file.size > MAX_VIDEO_MB * 1048576) { toast(`حجم الفيديو أكبر من ${MAX_VIDEO_MB} ميجا`); return; } }
+    else src = await shrinkImage(file, 1400, 0.82);
+    const url = await uploadMedia(k === 'video' ? 'videos' : 'products', src, (p) => (lab.firstChild.textContent = p + '%'));
+    await updateLotMedia(lot.id, k, url); toast(k === 'video' ? 'أُضيف الفيديو' : 'أُضيفت الصورة');
+  } catch (x) { toast('تعذّر الرفع — تأكد من تفعيل التخزين'); console.error(x); mediaKey = ''; paintMedia(); }
+});
+document.getElementById('lgal').onclick = (e) => {
+  const b = e.target.closest('.lg-i[data-src]'); if (!b) return;
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<img src="${b.dataset.src}" alt="" style="max-width:96vw;max-height:90vh;border-radius:14px">`; o.onclick = () => o.remove(); document.body.appendChild(o);
+};
 var WIN_ST = { awaiting_payment: 'بانتظار التحويل', receipt_uploaded: 'تم رفع الإيصال — قيد المراجعة', paid: 'تم استلام المبلغ', delivered: 'تم التسليم', cancelled: 'ملغاة' };
 var pendingShown = '';
 function showPendingWin() {
