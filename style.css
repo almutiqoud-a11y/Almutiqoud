@@ -440,3 +440,23 @@ tbody tr:nth-child(even){background:var(--soft)}
 .lg-v .lg-add{top:6px;right:6px;padding:2px 8px;font-size:11px}
 .lg-add,.lg-v .lg-add{top:auto;bottom:4px;right:4px;padding:1px 6px;font-size:9.5px;line-height:1.5;border-radius:6px}
 .lg-ph{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12%;background:#1A110A url(mark_gold.png) center 38%/22% auto no-repeat;color:#BFAE95;font:600 15px var(--fb)}
+
+/* ===== قاعات المزاد ===== */
+.halls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.hall-card{position:relative;display:block;border-radius:18px;overflow:hidden;aspect-ratio:1/1;color:#fff;text-decoration:none;box-shadow:0 6px 18px rgba(42,26,14,.2);transition:transform .2s;background:#2A1A0E}
+.hall-card:hover{transform:translateY(-4px)}
+.hall-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hall-card::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(20,12,6,.9) 0%,rgba(20,12,6,.2) 34%,transparent 52%)}
+.hall-go{position:absolute;z-index:1;right:10px;left:10px;bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px;color:#E8C77E;font-weight:700}
+.hall-st{position:absolute;z-index:1;bottom:36px;right:10px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.92);color:#2A1A0E;max-width:calc(100% - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hall-st.live{background:#B3261E;color:#fff}
+.hall-st.live i{flex:none;width:7px;height:7px;border-radius:50%;background:#fff;animation:hblink 1.2s infinite}
+.hall-st.none{background:rgba(0,0,0,.5);color:#eee}
+@keyframes hblink{50%{opacity:.25}}
+@media (max-width:760px){.halls{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;-webkit-overflow-scrolling:touch}.hall-card{flex:0 0 44%;scroll-snap-align:start}}
+
+.hallbar{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.hallbar .hb{flex:none;display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border:1px solid var(--line2);border-radius:999px;color:var(--ink,#2A1A0E);text-decoration:none;font-weight:600;font-size:14px;background:#fff}
+.hallbar .hb img{width:30px;height:30px;border-radius:50%;object-fit:cover}
+.hallbar .hb.on{background:#2A1A0E;color:#E8C77E;border-color:#2A1A0E}
+.hall-state{margin:0 0 14px;color:var(--gold-dark);font-weight:700}

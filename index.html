@@ -22,7 +22,7 @@
     <div class="hero-text">
       <span class="pill">مزاد • جملة • تجزئة — في منصة واحدة</span>
       <div class="btn-row">
-        <a class="btn btn-gold" href="auction.html">ادخل قاعة المزاد</a>
+        <a class="btn btn-gold" href="#halls">اختر قاعة المزاد</a>
         <a class="btn btn-line" href="retail.html">تسوّق التجزئة</a>
       </div>
       <div class="next-auction">
@@ -38,11 +38,14 @@
   </div></section>
 
   <section class="section"><div class="wrap">
+    <div class="section-title"><h2>قاعات المزاد</h2><p>خمس قاعات في مناطق المملكة — اختر قاعتك وزايد مباشرة</p></div>
+    <div class="halls" id="halls" style="scroll-margin-top:90px"></div>
+  </div></section>
+
+  <section class="section"><div class="wrap">
     <div class="section-title"><h2>من عالم المعتق</h2></div>
     <div class="gallery">
       <figure class="wide"><img src="kiosk.jpg" alt="نقطة بيع المعتق للعود" loading="lazy"><figcaption>نقطة بيع المعتق</figcaption></figure>
-      <figure><img src="mabkhara.jpg" alt="مبخرة المعتق" loading="lazy"><figcaption>مبخرة المعتق</figcaption></figure>
-      <figure><img src="mabkhara-stand.jpg" alt="ركن العود والبخور من المعتق" loading="lazy" style="object-position:center 35%"><figcaption>أجود أنواع العود والبخور</figcaption></figure>
     </div>
   </div></section>
 
@@ -93,7 +96,7 @@
 </main>
 <script type="module">
 import './layout.js';
-import { watchAuction, getProducts } from './db.js';
+import { watchAuction, getProducts, HALLS } from './db.js';
 import { fmt, esc, addToCart } from './layout.js';
 
 let startAt = null;
@@ -105,6 +108,15 @@ watchAuction((a) => {
   document.getElementById('naDate').textContent = a.status === 'live' ? 'المنتجات تُعرض الآن' : a.startAt ? new Date(a.startAt).toLocaleString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }) : '—';
   document.getElementById('cd').classList.toggle('hidden', !startAt);
 });
+// بطاقات القاعات: حالة كل قاعة مباشرة من مزادها
+const hallsBox = document.getElementById('halls');
+hallsBox.innerHTML = HALLS.map((h) => `<a class="hall-card" href="auction.html?hall=${h.id}" aria-label="${h.name}"><img src="${h.img}" alt="${h.name}" loading="lazy"><span class="hall-st none" id="hs-${h.id}">لا يوجد مزاد</span><span class="hall-go"><span>ادخل القاعة</span><span aria-hidden="true">←</span></span></a>`).join('');
+HALLS.forEach((h) => watchAuction((a) => {
+  const el = document.getElementById('hs-' + h.id); if (!el) return;
+  if (a && a.status === 'live') { el.className = 'hall-st live'; el.innerHTML = '<i></i>مباشر الآن'; }
+  else if (a && a.startAt && a.status !== 'ended' && a.startAt > Date.now() - 864e5) { el.className = 'hall-st'; el.textContent = new Date(a.startAt).toLocaleString('ar-SA', { weekday: 'long', hour: 'numeric', minute: '2-digit' }); }
+  else { el.className = 'hall-st none'; el.textContent = 'لا يوجد مزاد'; }
+}, h.id));
 const p2 = (n) => String(n).padStart(2, '0');
 setInterval(() => {
   if (!startAt) return;

@@ -25,6 +25,8 @@
 </div></div>
 <div class="wrap" style="padding-top:24px" id="aucWrap">
 
+  <nav class="hallbar" id="hallBar" aria-label="قاعات المزاد"></nav>
+  <p class="hall-state" id="hallState"></p>
   <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
@@ -81,10 +83,14 @@
 </div>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, fmt, esc, toast, shrinkImage, icons } from './layout.js';
-import { watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt, watchSettings, uploadMedia, updateLotMedia, MAX_VIDEO_MB } from './db.js';
+import { HALLS, hallOf, watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt, watchSettings, uploadMedia, updateLotMedia, MAX_VIDEO_MB } from './db.js';
 import { AUCTION, PAYMENT, CONTACT } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
+// القاعة الحالية من الرابط: auction.html?hall=riyadh
+const HALL = hallOf(new URLSearchParams(location.search).get('hall')).id;
+document.title = hallOf(HALL).name + ' — مزاد المعتق للعود';
+$('hallBar').innerHTML = HALLS.map((h) => `<a class="hb ${h.id === HALL ? 'on' : ''}" href="auction.html?hall=${h.id}" ${h.id === HALL ? 'aria-current="page"' : ''}><img src="${h.img}" alt="">${h.name}</a>`).join('');
 const MOBSEATS = [{ x: 65.92, b: 42.86, h: 1 }, { x: 28.56, b: 45.24, h: 1 }, { x: 44.84, b: 39.52, h: 1 }, { x: 89.24, b: 37.62, h: 0 }, { x: 10.90, b: 41.90, h: 0 }, { x: 93.90, b: 42.86, h: 0 }];
 const SEATS = [
   { x: 17.12, y: 61.46, d: 5.82, f: 1 }, { x: 87.36, y: 61.98, d: 5.97, f: 1 }, { x: 10.01, y: 53.39, d: 3.12, f: 1 }, { x: 89.20, y: 51.82, d: 3.41 }, { x: 18.82, y: 50.52, d: 2.84 }, { x: 81.25, y: 47.14, d: 2.56 }, { x: 76.49, y: 43.49, d: 2.27 }
@@ -100,6 +106,7 @@ $('incs').onclick = (e) => { const b = e.target.closest('.inc'); if (b) { inc = 
 paintIncs();
 
 watchAuction(async (a) => {
+  $('hallState').textContent = !a ? 'لا يوجد مزاد في هذه القاعة حالياً' : a.status === 'live' ? (a.title ? 'المزاد مباشر الآن — ' + a.title : 'المزاد مباشر الآن') : a.startAt && a.status !== 'ended' ? 'المزاد القادم: ' + new Date(a.startAt).toLocaleString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }) : 'لا يوجد مزاد في هذه القاعة حالياً';
   lotTotal = a?.lotTotal || 0; auTitle = a?.title || '';
   const id = a?.currentLotId || null;
   if (id === curId) return;
@@ -110,20 +117,20 @@ watchAuction(async (a) => {
     bids = bs; drawLog();
     paintPaddles();
   });
-});
+}, HALL);
 
 watchLots((ls) => {
   const q = ls.filter((l) => l.status === 'queued').slice(0, 6);
   $('queue').innerHTML = q.length ? q.map((l) => `<div class="q"><div class="thumb">${l.image ? `<img src="${esc(l.image)}" alt="">` : ''}</div><div><div class="muted" style="font-size:12px">المنتج ${esc(l.no)}</div><b style="font-size:15px">${esc(l.name)}</b><div class="gold" style="font-size:13px">يبدأ من ${fmt(l.openPrice)}${l.openPrice != null ? ' ريال' : ''}</div></div></div>`).join('') : '<p class="muted">لا توجد منتجات أخرى في هذا المزاد.</p>';
-});
+}, HALL);
 
 onCurrentUser(async (u) => {
   $('vGate').classList.toggle('hidden', !!u); $('aucWrap').classList.toggle('locked', !u);
-  joinRoom(u); paint(); paintPaddles();
+  joinRoom(u, HALL); paint(); paintPaddles();
   unWins && unWins(); myWins = []; drawWins();
   if (u) unWins = await watchMyWins(u.uid, (ws) => { myWins = ws; drawWins(); });
 });
-watchPresence((ps) => { present = ps; paintPaddles(); });
+watchPresence((ps) => { present = ps; paintPaddles(); }, HALL);
 
 function ago(t) { if (!t) return 'الآن'; const s = Math.round((Date.now() - t) / 1000); return s < 10 ? 'الآن' : s < 60 ? `قبل ${s} ث` : s < 3600 ? `قبل ${Math.round(s / 60)} د` : `قبل ${Math.round(s / 3600)} س`; }
 

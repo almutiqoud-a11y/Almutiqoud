@@ -1,5 +1,5 @@
 // طبقة البيانات: Firebase عند وجود الإعدادات، وإلا «وضع العرض» ببيانات تجريبية
-import { firebaseConfig, ADMIN_EMAILS, AUCTION, CLOUDINARY } from './firebase-config.js';
+import { firebaseConfig, ADMIN_EMAILS, AUCTION, CLOUDINARY, HALLS } from './firebase-config.js';
 
 export const DEMO = !firebaseConfig.apiKey;
 const V = '10.12.2';
@@ -161,10 +161,17 @@ export async function signOutUser() {
 }
 
 /* ---------------- المزاد ---------------- */
-export async function watchAuction(cb) {
-  if (DEMO) { const f = () => cb({ ...demo.auction }); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+// قاعة الرياض تستخدم المستند القديم «current» حتى لا تضيع بيانات المزاد الحالي
+export { HALLS };
+export const hallOf = (id) => HALLS.find((h) => h.id === id) || HALLS[0];
+export const hallDoc = (id) => (hallOf(id).id === 'riyadh' ? 'current' : hallOf(id).id);
+const lotHall = (l) => l.hall || 'riyadh';
+const demoHalls = { hijaz: { title: 'دار الكمبودي', status: 'upcoming', startAt: Date.now() + 1.2 * 86400e3 }, east: { title: 'عطور الخليج', status: 'upcoming', startAt: Date.now() + 2.3 * 86400e3 }, north: { title: 'عود حائل', status: 'upcoming', startAt: Date.now() + 3.1 * 86400e3 } };
+export async function watchAuction(cb, hall = 'riyadh') {
+  hall = hallOf(hall).id;
+  if (DEMO) { const f = () => cb(hall === 'riyadh' ? { ...demo.auction } : demoHalls[hall] ? { ...demoHalls[hall] } : null); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
   const { db, F } = await init();
-  return F.onSnapshot(F.doc(db, 'auctions', 'current'), (s) => cb(s.exists() ? { ...s.data(), startAt: ms(s.data().startAt) } : null));
+  return F.onSnapshot(F.doc(db, 'auctions', hallDoc(hall)), (s) => cb(s.exists() ? { ...s.data(), startAt: ms(s.data().startAt) } : null));
 }
 
 export async function watchLot(id, cb) {
@@ -173,10 +180,11 @@ export async function watchLot(id, cb) {
   return F.onSnapshot(F.doc(db, 'lots', id), (s) => cb(s.exists() ? { id: s.id, ...s.data(), endsAt: ms(s.data().endsAt) } : null));
 }
 
-export async function watchLots(cb) {
-  if (DEMO) { const f = () => cb(Object.values(demo.lots).sort((a, b) => a.no - b.no)); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+export async function watchLots(cb, hall = 'riyadh') {
+  hall = hallOf(hall).id;
+  if (DEMO) { const f = () => cb(Object.values(demo.lots).filter((l) => lotHall(l) === hall).sort((a, b) => a.no - b.no)); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
   const { db, F } = await init();
-  return F.onSnapshot(F.query(F.collection(db, 'lots'), F.orderBy('no')), (q) => cb(q.docs.map((d) => ({ id: d.id, ...d.data(), endsAt: ms(d.data().endsAt) }))));
+  return F.onSnapshot(F.query(F.collection(db, 'lots'), F.orderBy('no')), (q) => cb(q.docs.map((d) => ({ id: d.id, ...d.data(), endsAt: ms(d.data().endsAt) })).filter((l) => lotHall(l) === hall)));
 }
 
 export async function watchBids(lotId, cb) {
@@ -252,25 +260,27 @@ export async function admin() {
 // كل مستخدم مسجّل يفتح صفحة المزاد يُسجَّل حاضراً ويأخذ مقعداً بمضربه، ويُحدَّث كل 25 ثانية
 const demoPresence = [215, 88, 31, 105, 63].map((p, i) => ({ uid: 'd' + p, paddle: p, joinedAt: Date.now() - (10 - i) * 6e4, seenAt: Date.now() }));
 let beat = null;
-export async function joinRoom(user) {
+export async function joinRoom(user, hall = 'riyadh') {
+  hall = hallOf(hall).id;
   clearInterval(beat);
   if (!user || !user.paddle) return;
   const joinedAt = Date.now();
   if (DEMO) {
-    if (!demoPresence.find((x) => x.uid === user.uid)) { demoPresence.push({ uid: user.uid, paddle: user.paddle, joinedAt, seenAt: Date.now() }); setTimeout(demoEmit, 0); }
+    if (!demoPresence.find((x) => x.uid === user.uid)) { demoPresence.push({ uid: user.uid, paddle: user.paddle, hall, joinedAt, seenAt: Date.now() }); setTimeout(demoEmit, 0); }
     return;
   }
   const { db, F } = await init();
   const ref = F.doc(db, 'presence', user.uid);
-  const ping = () => F.setDoc(ref, { uid: user.uid, paddle: user.paddle, joinedAt, seenAt: Date.now() }).catch(() => {});
+  const ping = () => F.setDoc(ref, { uid: user.uid, paddle: user.paddle, hall, joinedAt, seenAt: Date.now() }).catch(() => {});
   ping(); beat = setInterval(ping, 25000);
   addEventListener('pagehide', () => F.deleteDoc(ref).catch(() => {}), { once: true });
 }
-export async function watchPresence(cb) {
-  if (DEMO) { const f = () => cb(demoPresence.slice()); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+export async function watchPresence(cb, hall = 'riyadh') {
+  hall = hallOf(hall).id;
+  if (DEMO) { const f = () => cb(demoPresence.filter((x) => (x.hall || 'riyadh') === hall)); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
   const { db, F } = await init();
   let list = [];
-  const emit = () => cb(list.filter((x) => Date.now() - x.seenAt < 70000));
+  const emit = () => cb(list.filter((x) => Date.now() - x.seenAt < 70000 && (x.hall || 'riyadh') === hall));
   const un = F.onSnapshot(F.collection(db, 'presence'), (s) => { list = s.docs.map((d) => d.data()); emit(); });
   const t = setInterval(emit, 15000);
   return () => { un(); clearInterval(t); };
