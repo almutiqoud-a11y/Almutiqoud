@@ -35,3 +35,10 @@ export const CONTACT = {
   email: "[البريد الإلكتروني]",
   cr: "[السجل التجاري]"
 };
+
+// رفع الصور والفيديو مجاناً عبر Cloudinary (بدون بطاقة)
+// من لوحة Cloudinary: Cloud name + اسم Upload preset من نوع Unsigned
+export const CLOUDINARY = {
+  cloudName: "ea4rk7u2",
+  uploadPreset: "almutiqoud"
+};

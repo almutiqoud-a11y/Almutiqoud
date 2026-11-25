@@ -150,7 +150,7 @@ function videoHTML(u) {
   if (!u) return '';
   const m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([\w-]{11})/);
   if (m) { const shorts = /shorts\//.test(u); return `<div class="vid ${shorts ? 'tall' : ''}"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?playsinline=1&rel=0" title="فيديو المنتج" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`; }
-  if (/\.(mp4|webm|mov)(\?|$)/i.test(u)) return `<div class="vid"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(u) || /res\.cloudinary\.com\/.+\/video\/upload\//.test(u)) return `<div class="vid"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
   return `<a class="btn btn-line btn-sm" href="${esc(u)}" target="_blank" rel="noopener">شاهد فيديو المنتج</a>`;
 }
 var mediaKey = '';

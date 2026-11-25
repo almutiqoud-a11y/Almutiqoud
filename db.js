@@ -1,5 +1,5 @@
 // طبقة البيانات: Firebase عند وجود الإعدادات، وإلا «وضع العرض» ببيانات تجريبية
-import { firebaseConfig, ADMIN_EMAILS, AUCTION } from './firebase-config.js';
+import { firebaseConfig, ADMIN_EMAILS, AUCTION, CLOUDINARY } from './firebase-config.js';
 
 export const DEMO = !firebaseConfig.apiKey;
 const V = '10.12.2';
@@ -393,6 +393,7 @@ function dataUrlToBlob(u) { const [h, b] = u.split(','); const mime = h.match(/:
 export async function uploadMedia(folder, fileOrDataUrl, onProgress) {
   const blob = typeof fileOrDataUrl === 'string' ? dataUrlToBlob(fileOrDataUrl) : fileOrDataUrl;
   if (DEMO) return typeof fileOrDataUrl === 'string' ? fileOrDataUrl : URL.createObjectURL(blob);
+  if (CLOUDINARY && CLOUDINARY.cloudName && CLOUDINARY.uploadPreset) return uploadCloudinary(folder, blob, onProgress);
   const { storage, S, auth } = await initStorage();
   const uid = auth.currentUser?.uid || 'anon';
   const ext = (blob.type.split('/')[1] || 'bin').replace('quicktime', 'mov').replace('jpeg', 'jpg');
@@ -407,4 +408,21 @@ export async function updateLotMedia(lotId, field, url) {
   if (DEMO) { if (demo.lots[lotId]) { demo.lots[lotId][field] = url; demoEmit(); } return; }
   const { db, F } = await init();
   await F.updateDoc(F.doc(db, 'lots', lotId), { [field]: url });
+}
+
+// Cloudinary: رفع مباشر من المتصفح (مجاني) — يعيد رابط https للملف
+function uploadCloudinary(folder, blob, onProgress) {
+  return new Promise((res, rej) => {
+    const kind = blob.type.startsWith('video/') ? 'video' : 'image';
+    const fd = new FormData();
+    fd.append('file', blob);
+    fd.append('upload_preset', CLOUDINARY.uploadPreset);
+    fd.append('folder', 'almutiqoud/' + folder);
+    const x = new XMLHttpRequest();
+    x.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/${kind}/upload`);
+    x.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100)); };
+    x.onload = () => { try { const r = JSON.parse(x.responseText); if (x.status < 300 && r.secure_url) res(kind === 'video' ? r.secure_url.replace('/upload/', '/upload/q_auto/').replace(/\.\w+$/, '.mp4') : r.secure_url.replace('/upload/', '/upload/f_auto,q_auto/')); else rej(new Error(r.error?.message || 'upload failed')); } catch (e) { rej(e); } };
+    x.onerror = () => rej(new Error('network'));
+    x.send(fd);
+  });
 }

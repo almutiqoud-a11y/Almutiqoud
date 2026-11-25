@@ -157,7 +157,7 @@ function videoHTML(u) {
   if (!u) return '';
   const m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/))([\w-]{11})/);
   if (m) return `<div class="vid ${/shorts\//.test(u) ? 'tall' : ''}"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?playsinline=1&rel=0" title="فيديو المنتج" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`;
-  if (/\.(mp4|webm|mov)(\?|$)/i.test(u)) return `<div class="vid"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(u) || /res\.cloudinary\.com\/.+\/video\/upload\//.test(u)) return `<div class="vid"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
   return `<a class="btn btn-line btn-sm" style="margin:8px 18px 0" href="${esc(u)}" target="_blank" rel="noopener">شاهد الفيديو</a>`;
 }
 function card(p, mine) {
