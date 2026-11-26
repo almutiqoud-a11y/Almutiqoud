@@ -90,7 +90,7 @@
             <label class="field">الوصف<textarea name="desc" rows="3" placeholder="النوع، المنشأ، الدرجة، الكمية المتاحة…"></textarea></label>
             <div class="row2">
               <label class="field">السعر (ريال)<input name="price" type="number" min="0" step="0.01"></label>
-              <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للأوقية</option><option>لثُمن الأوقية</option><option>لربع كيلو</option><option>لنصف كيلو</option><option>للكيلو</option><option>للقطعة</option><option>للعلبة</option><option>هدية</option></select></label>
+              <label class="field">الوحدة<select name="unit"><optgroup label="الأدهان"><option>ربع تولة دهن</option><option>نصف تولة دهن</option><option>تولة دهن</option></optgroup><optgroup label="العود"><option>تولة عود (14 جم)</option><option>أوقية (28 جم)</option><option>ثُمن كيلو (125 جم)</option><option>ربع كيلو (250 جم)</option><option>نصف كيلو (500 جم)</option><option>كيلو (1000 جم)</option></optgroup><optgroup label="أخرى"><option>قطعة</option><option>هدية</option></optgroup></select></label>
             </div>
             <label class="field">القاعة المفضلة لعرض المنتج في المزاد<select name="hall"><option value="">لا أرغب في عرضه بالمزاد</option><option value="riyadh">قاعة الرياض</option><option value="hijaz">قاعة الحجاز</option><option value="east">قاعة الشرق</option><option value="south">قاعة الجنوب</option><option value="north">قاعة الشمال</option><option value="intl">القاعة الدولية</option></select></label>
             <div class="field">الصور (حتى 4)
@@ -274,7 +274,7 @@ document.addEventListener('click', async (e) => {
   const c = e.target.closest('#lstGrid [data-chat]');
   if (c) { const p = lst.find((x) => x.owner === c.dataset.chat); startChat({ uid: p.owner, name: p.ownerName, company: '' }, c.dataset.topic); return; }
   const ed = e.target.closest('[data-edit]');
-  if (ed) { const p = lst.find((x) => x.id === ed.dataset.edit); const f = $('lf'); f.id.value = p.id; f.name.value = p.name; f.desc.value = p.desc || ''; f.price.value = p.price ?? ''; f.hall.value = p.hall || ''; f.unit.value = p.unit || 'للتولة'; f.video.value = p.video || ''; imgs = (p.images || []).slice(); drawSlots(); $('lfReset').classList.remove('hidden'); f.scrollIntoView({ behavior: 'smooth' }); return; }
+  if (ed) { const p = lst.find((x) => x.id === ed.dataset.edit); const f = $('lf'); f.id.value = p.id; f.name.value = p.name; f.desc.value = p.desc || ''; f.price.value = p.price ?? ''; f.hall.value = p.hall || ''; f.unit.value = p.unit || 'تولة عود (14 جم)'; if (!f.unit.value) f.unit.value = 'تولة عود (14 جم)'; f.video.value = p.video || ''; imgs = (p.images || []).slice(); drawSlots(); $('lfReset').classList.remove('hidden'); f.scrollIntoView({ behavior: 'smooth' }); return; }
   const aa = e.target.closest('[data-aucadd]');
   if (aa) { const p = lst.find((x) => x.id === aa.dataset.aucadd); if (await askPledge()) askAuction(p); return; }
   const ag = e.target.closest('[data-aucgo]');
