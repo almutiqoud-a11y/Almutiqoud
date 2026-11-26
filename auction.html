@@ -85,7 +85,7 @@
 </div>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, fmt, esc, toast, shrinkImage, icons } from './layout.js';
-import { HALLS, hallOf, watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt, watchSettings, uploadMedia, updateLotMedia, MAX_VIDEO_MB } from './db.js';
+import { HALLS, hallOf, watchAuction, watchLot, watchLots, watchBids, placeBid, joinRoom, watchPresence, watchMyWins, uploadReceipt, watchSettings, uploadMedia, updateLotMedia, MAX_VIDEO_MB, closeIfExpired } from './db.js';
 import { AUCTION, PAYMENT, CONTACT } from './firebase-config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -253,7 +253,12 @@ setInterval(() => {
   $('timer').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   $('timer').style.color = s < 30 ? 'var(--live)' : '#1A110A';
   if (s === 0) paint();
+  // إغلاق تلقائي بعد انتهاء الوقت بثوانٍ (يعمل من أي عضو داخل القاعة)
+  if (s === 0 && lot.status === 'live' && currentUser && Date.now() > lot.endsAt + 4000 && closingId !== lot.id) {
+    closingId = lot.id; closeIfExpired(lot.id).catch((e) => console.warn('auto-close', e)).finally(() => setTimeout(() => { closingId = null; }, 8000));
+  }
 }, 500);
+var closingId = null;
 
 $('bidBtn').onclick = async () => {
   $('bidErr').classList.add('hidden');

@@ -28,18 +28,64 @@ service cloud.firestore {
       allow update: if signedIn() && request.resource.data.next == resource.data.next + 1;
     }
 
-    // المزاد: الكل يقرأ، والمدير فقط يكتب
+    function lotDoc(id) { return /databases/$(database)/documents/lots/$(id); }
+    function hallKey(h) { return h == 'riyadh' ? 'current' : h; }
+    function hallOk(h) { return h in ['riyadh', 'hijaz', 'east', 'south', 'north', 'intl']; }
+
+    // المزاد: الكل يقرأ؛ المدير يكتب؛ والتاجر يبدأ مزاد منتجه إذا كانت القاعة فاضية
     match /auctions/{id} {
       allow read: if true;
       allow write: if isAdmin();
+      allow create, update: if signedIn()
+        && request.resource.data.status == 'live'
+        && (resource == null
+            ? request.resource.data.keys().hasOnly(['currentLotId', 'status', 'title'])
+            : request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentLotId', 'status', 'title']))
+        && getAfter(lotDoc(request.resource.data.currentLotId)).data.get('ownerUid', '') == request.auth.uid
+        && getAfter(lotDoc(request.resource.data.currentLotId)).data.status == 'live'
+        && hallKey(getAfter(lotDoc(request.resource.data.currentLotId)).data.hall) == id
+        && (resource == null
+            || resource.data.get('currentLotId', null) == null
+            || resource.data.currentLotId == request.resource.data.currentLotId
+            || !exists(lotDoc(resource.data.currentLotId))
+            || get(lotDoc(resource.data.currentLotId)).data.status != 'live');
     }
 
     // القطع: الكل يقرأ؛ المدير يكتب كل شيء؛ المستخدم يزايد فقط بشروط
     match /lots/{lotId} {
       allow read: if true;
       allow create, delete: if isAdmin();
+      // التاجر المعتمد يضيف منتجه إلى «المنتجات التالية»
+      allow create: if isApproved()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'queued'
+        && hallOk(request.resource.data.hall)
+        && request.resource.data.openPrice is number && request.resource.data.openPrice > 0
+        && request.resource.data.currentPrice == null && request.resource.data.bidCount == 0
+        && request.resource.data.leaderUid == null && request.resource.data.endsAt == null
+        && request.resource.data.lotMinutes is int && request.resource.data.lotMinutes >= 1 && request.resource.data.lotMinutes <= 30;
+      // ويسحبه قبل البدء
+      allow delete: if signedIn() && resource.data.get('ownerUid', '') == request.auth.uid && resource.data.status == 'queued';
+      // ويبدأ مزاده بنفسه (مع تحديث شاشة القاعة في نفس العملية)
+      allow update: if signedIn()
+        && resource.data.get('ownerUid', '') == request.auth.uid
+        && resource.data.status == 'queued'
+        && request.resource.data.status == 'live'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'currentPrice', 'endsAt', 'leaderUid', 'leaderPaddle', 'bidCount'])
+        && request.resource.data.currentPrice == resource.data.openPrice
+        && request.resource.data.bidCount == 0 && request.resource.data.leaderUid == null
+        && request.resource.data.endsAt > request.time
+        && request.resource.data.endsAt <= request.time + duration.value(resource.data.lotMinutes * 60 + 60, 's')
+        && getAfter(/databases/$(database)/documents/auctions/$(hallKey(resource.data.hall))).data.currentLotId == lotId;
+      // إغلاق تلقائي بعد انتهاء الوقت من أي عضو داخل القاعة
+      allow update: if signedIn()
+        && resource.data.status == 'live'
+        && request.time > resource.data.endsAt + duration.value(2, 's')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'closedBy', 'closedAt'])
+        && request.resource.data.status == (resource.data.get('leaderUid', null) != null ? 'sold' : 'unsold');
       allow update: if isAdmin() || (
         signedIn()
+        && resource.data.get('ownerUid', '') != request.auth.uid
         && resource.data.status == 'live'
         && request.time < resource.data.endsAt
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPrice', 'leaderUid', 'leaderPaddle', 'endsAt', 'bidCount'])
@@ -65,6 +111,15 @@ service cloud.firestore {
     match /wins/{lotId} {
       allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow create, delete: if isAdmin();
+      // تسجيل الفائز تلقائياً مع إغلاق القطعة في نفس العملية
+      allow create: if signedIn()
+        && get(lotDoc(lotId)).data.status == 'live'
+        && getAfter(lotDoc(lotId)).data.status == 'sold'
+        && request.resource.data.lotId == lotId
+        && request.resource.data.uid == get(lotDoc(lotId)).data.leaderUid
+        && request.resource.data.amount == get(lotDoc(lotId)).data.currentPrice
+        && request.resource.data.commissionPct == 5
+        && request.resource.data.status == 'awaiting_payment';
       allow update: if isAdmin() || (
         signedIn() && resource.data.uid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['receipt', 'status', 'receiptAt'])
@@ -78,7 +133,7 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
-    // منتجات القطاعي وأسعار الجملة: الكل يقرأ، والمدير يكتب
+    // منتجات التجزئة وأسعار الجملة: الكل يقرأ، والمدير يكتب
     // قسم التجار: الدليل والمنتجات للأعضاء المعتمدين فقط
     match /directory/{uid} {
       allow read: if isApproved() || isAdmin();

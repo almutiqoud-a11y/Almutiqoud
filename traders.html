@@ -20,6 +20,7 @@
 .dir-card h3{font-size:21px}
 .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;background:var(--raised);color:var(--gold-dark);border:1px solid var(--line2)}
 .badge.tr{background:var(--gold);color:var(--on-gold);border-color:var(--gold)}
+.auc-box{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px dashed var(--line2);border-radius:12px;background:#FBF6EC;margin-top:4px}
 .dir-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
 .lst .imgs{position:relative;aspect-ratio:4/3;background:var(--raised) url(mark_gold.png) center/56px auto no-repeat}
 .lst .imgs>img{width:100%;height:100%;object-fit:cover}
@@ -89,7 +90,7 @@
             <label class="field">الوصف<textarea name="desc" rows="3" placeholder="النوع، المنشأ، الدرجة، الكمية المتاحة…"></textarea></label>
             <div class="row2">
               <label class="field">السعر (ريال)<input name="price" type="number" min="0" step="0.01"></label>
-              <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للجرام</option><option>للكيلو</option><option>للقطعة</option><option>للعلبة</option></select></label>
+              <label class="field">الوحدة<select name="unit"><option>للتولة</option><option>للأوقية</option><option>لثُمن الأوقية</option><option>لربع كيلو</option><option>لنصف كيلو</option><option>للكيلو</option><option>للقطعة</option><option>للعلبة</option><option>هدية</option></select></label>
             </div>
             <label class="field">القاعة المفضلة لعرض المنتج في المزاد<select name="hall"><option value="">لا أرغب في عرضه بالمزاد</option><option value="riyadh">قاعة الرياض</option><option value="hijaz">قاعة الحجاز</option><option value="east">قاعة الشرق</option><option value="south">قاعة الجنوب</option><option value="north">قاعة الشمال</option><option value="intl">القاعة الدولية</option></select></label>
             <div class="field">الصور (حتى 4)
@@ -113,7 +114,7 @@
 </main>
 <script type="module">
 import { currentUser, onCurrentUser, openAuth, openCompleteProfile, esc, fmt, toast, shrinkImage, COUNTRIES } from './layout.js';
-import { getDirectory, getListings, saveListing, deleteListing, openChat, uploadMedia, MAX_VIDEO_MB, savePledge, watchSettings } from './db.js';
+import { getDirectory, getListings, saveListing, deleteListing, openChat, uploadMedia, MAX_VIDEO_MB, savePledge, watchSettings, HALLS, hallOf, submitToAuction, watchMyLots, withdrawLot, startMyLot } from './db.js';
 import { icons } from './layout.js';
 const $ = (id) => document.getElementById(id);
 var started = false, dir = [], lst = [], imgs = [];
@@ -170,6 +171,7 @@ const waNum = (p) => { p = String(p || '').replace(/[^\d+]/g, ''); if (p.startsW
 
 async function load() {
   [dir, lst] = await Promise.all([getDirectory(), getListings()]);
+  watchMyLots(currentUser.uid, (ls) => { myLots = ls; drawMine(); });
   drawDir(); drawLst(); drawMine();
 }
 $('dq').oninput = drawDir; $('dc').onchange = drawDir; $('lq').oninput = drawLst; $('lc').onchange = drawLst;
@@ -212,9 +214,48 @@ function card(p, mine) {
       ${p.hall && HALL_NM[p.hall] ? `<span class="badge" style="align-self:flex-start">للمزاد في ${HALL_NM[p.hall]}</span>` : ''}
       ${p.desc ? `<p class="muted" style="margin:0;font-size:14px;white-space:pre-line">${esc(p.desc)}</p>` : ''}
       <div class="price"><b>${p.price != null ? fmt(p.price) + ' ريال' : 'السعر عند التواصل'}</b><span class="muted">${esc(p.unit || '')}</span></div>
-      ${mine ? `<div style="display:flex;gap:8px;margin-top:auto"><button class="btn btn-line btn-sm" data-edit="${esc(p.id)}">تعديل</button><button class="btn btn-line btn-sm" data-del="${esc(p.id)}">حذف</button></div>`
-        : `<button class="btn btn-gold btn-sm" data-chat="${esc(p.owner)}" data-topic="${esc(p.name)}">تواصل مع البائع</button>`}
+      ${mine ? `${aucBlock(p)}<div style="display:flex;gap:8px;margin-top:auto"><button class="btn btn-line btn-sm" data-edit="${esc(p.id)}">تعديل</button><button class="btn btn-line btn-sm" data-del="${esc(p.id)}">حذف</button></div>`
+        : contactBtns(p)}
     </div></article>`;
+}
+// أزرار التواصل مع البائع: مراسلة داخل المنصة + واتساب إن وُجد رقمه في الدليل
+function contactBtns(p) {
+  const d = dir.find((x) => x.uid === p.owner) || {};
+  const ph = String(d.phone || '').replace(/\D/g, '').replace(/^0/, '');
+  const wa = ph ? `https://wa.me/${ph.startsWith('966') ? ph : '966' + ph}?text=${encodeURIComponent(`السلام عليكم، أستفسر عن منتجك «${p.name}» المعروض في منصة المعتق للعود.`)}` : '';
+  return `<div style="display:flex;gap:8px;margin-top:auto;flex-wrap:wrap"><button class="btn btn-gold btn-sm" style="flex:1" data-chat="${esc(p.owner)}" data-topic="${esc(p.name)}">مراسلة البائع</button>${wa ? `<a class="btn btn-line btn-sm" style="flex:1" href="${wa}" target="_blank" rel="noopener">واتساب</a>` : ''}</div>`;
+}
+// حالة منتج التاجر في المزاد + أزراره
+var myLots = [];
+function aucBlock(p) {
+  const l = myLots.filter((x) => x.listingId === p.id).sort((a, b) => (b.no || 0) - (a.no || 0))[0];
+  const box = (inner) => `<div class="auc-box">${inner}</div>`;
+  if (!l || l.status === 'unsold') return box(`${l ? '<span class="muted" style="font-size:13px">انتهى المزاد السابق بدون بيع</span>' : ''}<button class="btn btn-gold btn-sm" data-aucadd="${esc(p.id)}">عرض في المزاد</button>`);
+  const hn = hallOf(l.hall).name;
+  if (l.status === 'queued') return box(`<span style="font-size:13px"><b class="gold">في المنتجات التالية</b> — ${hn} • يبدأ من ${fmt(l.openPrice)} ريال • ${l.lotMinutes || 5} دقائق</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-gold btn-sm" data-aucgo="${esc(l.id)}">▶ بدء المزاد</button><button class="btn btn-line btn-sm" data-aucwd="${esc(l.id)}">سحب</button></div>`);
+  if (l.status === 'live') return box(`<span style="font-size:13px"><b style="color:#B3261E">● مباشر الآن</b> — ${hn} • ${fmt(l.currentPrice)} ريال</span><a class="btn btn-gold btn-sm" href="auction.html?hall=${esc(l.hall)}">افتح القاعة</a>`);
+  if (l.status === 'sold') return box(`<span style="font-size:13px"><b class="gold">بيع في المزاد</b> — ${hn} بمبلغ ${fmt(l.currentPrice)} ريال للمضرب ${esc(l.leaderPaddle)}</span><button class="btn btn-line btn-sm" data-aucadd="${esc(p.id)}">عرضه مرة أخرى</button>`);
+  return '';
+}
+function askAuction(p) {
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="aucT" style="max-width:440px"><button class="icon-btn close" aria-label="إغلاق">×</button>
+    <h2 id="aucT">عرض «${esc(p.name)}» في المزاد</h2>
+    <p class="muted" style="margin-top:-4px">يظهر منتجك في «المنتجات التالية» داخل القاعة التي تختارها، وتبدأ مزاده متى شئت.</p>
+    <form class="form" id="aucF">
+      <label class="field">القاعة<select name="hall" required>${HALLS.map((h) => `<option value="${h.id}" ${h.id === (p.hall || 'riyadh') ? 'selected' : ''}>${h.name}</option>`).join('')}</select></label>
+      <div class="row2"><label class="field">سعر الافتتاح (ريال)<input name="openPrice" type="number" min="1" step="1" required value="${p.price ?? ''}"></label>
+      <label class="field">مدة المزاد<select name="minutes">${[3, 5, 10, 15, 20, 30].map((m) => `<option value="${m}" ${m === 5 ? 'selected' : ''}>${m} دقائق</option>`).join('')}</select></label></div>
+      <p class="muted" style="font-size:13px;margin:0">عمولة المنصة 5% من سعر البيع حسب تعهدك.</p>
+      <button class="btn btn-gold" style="width:100%">أضف إلى المنتجات التالية</button>
+      <p class="msg hidden" id="aucMsg" role="alert"></p></form></div>`;
+  document.body.appendChild(o);
+  const close = () => o.remove(); o.querySelector('.close').onclick = close; o.addEventListener('click', (e) => { if (e.target === o) close(); });
+  o.querySelector('#aucF').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const b = f.querySelector('button.btn-gold'); b.disabled = true;
+    try { await submitToAuction(currentUser, p, { hall: f.hall.value, openPrice: f.openPrice.value, minutes: f.minutes.value }); close(); toast('أُضيف منتجك إلى المنتجات التالية في ' + hallOf(f.hall.value).name); }
+    catch (x) { const m = o.querySelector('#aucMsg'); m.className = 'msg err'; m.textContent = 'تعذّر الإضافة — تأكد من اعتماد حسابك ثم حاول مرة أخرى'; b.disabled = false; console.error(x); }
+  };
 }
 function drawLst() {
   const q = $('lq').value.trim(), c = $('lc').value;
@@ -234,6 +275,15 @@ document.addEventListener('click', async (e) => {
   if (c) { const p = lst.find((x) => x.owner === c.dataset.chat); startChat({ uid: p.owner, name: p.ownerName, company: '' }, c.dataset.topic); return; }
   const ed = e.target.closest('[data-edit]');
   if (ed) { const p = lst.find((x) => x.id === ed.dataset.edit); const f = $('lf'); f.id.value = p.id; f.name.value = p.name; f.desc.value = p.desc || ''; f.price.value = p.price ?? ''; f.hall.value = p.hall || ''; f.unit.value = p.unit || 'للتولة'; f.video.value = p.video || ''; imgs = (p.images || []).slice(); drawSlots(); $('lfReset').classList.remove('hidden'); f.scrollIntoView({ behavior: 'smooth' }); return; }
+  const aa = e.target.closest('[data-aucadd]');
+  if (aa) { const p = lst.find((x) => x.id === aa.dataset.aucadd); if (await askPledge()) askAuction(p); return; }
+  const ag = e.target.closest('[data-aucgo]');
+  if (ag) { const l = myLots.find((x) => x.id === ag.dataset.aucgo); ag.disabled = true;
+    try { await startMyLot(l); toast('بدأ مزادك في ' + hallOf(l.hall).name); setTimeout(() => { location.href = 'auction.html?hall=' + l.hall; }, 900); }
+    catch (x) { ag.disabled = false; toast(x.code === 'busy' ? 'يوجد مزاد مباشر في هذه القاعة الآن — انتظر انتهاءه أو اختر قاعة أخرى' : 'تعذّر بدء المزاد، حاول مرة أخرى'); console.error(x); }
+    return; }
+  const aw = e.target.closest('[data-aucwd]');
+  if (aw) { if (!aw.dataset.ok) { aw.dataset.ok = 1; aw.textContent = 'تأكيد السحب'; return; } try { await withdrawLot(aw.dataset.aucwd); toast('سُحب المنتج من المزاد'); } catch { toast('تعذّر السحب'); } return; }
   const dl = e.target.closest('[data-del]');
   if (dl) { if (!dl.dataset.ok) { dl.dataset.ok = 1; dl.textContent = 'تأكيد الحذف'; return; } await deleteListing(dl.dataset.del); lst = lst.filter((x) => x.id !== dl.dataset.del); drawMine(); toast('حُذف المنتج'); }
 });

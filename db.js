@@ -212,6 +212,7 @@ export async function placeBid(lotId, inc, user) {
     const l = s.data();
     const ends = ms(l.endsAt);
     if (l.status !== 'live' || Date.now() > ends) throw new Error('انتهى وقت هذه القطعة');
+    if (l.ownerUid && l.ownerUid === user.uid) throw new Error('لا يمكنك المزايدة على منتجك');
     const amount = (l.currentPrice || l.openPrice) + inc;
     const left = ends - Date.now();
     const newEnds = left < AUCTION.antiSnipeSeconds * 1e3 ? F.Timestamp.fromMillis(Date.now() + AUCTION.antiSnipeSeconds * 1e3) : l.endsAt;
@@ -443,4 +444,78 @@ export async function savePledge(user, pct) {
   const { db, F } = await init();
   await F.updateDoc(F.doc(db, 'users', user.uid), { pledgeAt: Date.now(), pledgePct: pct });
   user.pledgeAt = Date.now(); user.pledgePct = pct;
+}
+
+/* ---------------- مزاد التاجر: يعرض منتجه في «المنتجات التالية» ويبدأه بنفسه ---------------- */
+// يضيف منتج التاجر إلى قائمة المنتجات التالية في القاعة التي يختارها
+export async function submitToAuction(user, listing, { hall, openPrice, minutes }) {
+  hall = hallOf(hall).id;
+  const base = {
+    name: listing.name, age: listing.desc || '', origin: '', weight: '', openPrice: +openPrice,
+    image: (listing.images || [])[0] || '', image2: (listing.images || [])[1] || '', image3: (listing.images || [])[2] || '', image4: (listing.images || [])[3] || '',
+    video: listing.video || '', hall, status: 'queued', currentPrice: null, bidCount: 0, endsAt: null, leaderUid: null, leaderPaddle: null,
+    lotMinutes: Math.min(30, Math.max(1, Math.round(+minutes || 5))), ownerUid: user.uid, ownerName: user.company || user.name || '', listingId: listing.id
+  };
+  if (DEMO) { const id = 'u' + Date.now(); const no = Math.max(0, ...Object.values(demo.lots).map((l) => l.no || 0)) + 1; demo.lots[id] = { id, no, ...base }; demoEmit(); return id; }
+  const { db, F } = await init();
+  const s = await F.getDocs(F.query(F.collection(db, 'lots'), F.orderBy('no', 'desc'), F.limit(1)));
+  const no = s.empty ? 1 : (+s.docs[0].data().no || 0) + 1;
+  const r = await withTimeout(F.addDoc(F.collection(db, 'lots'), { ...base, no, createdAt: F.serverTimestamp() }));
+  return r.id;
+}
+// منتجات التاجر في المزاد (لمعرفة حالتها: في الانتظار / مباشر / بيع)
+export async function watchMyLots(uid, cb) {
+  if (DEMO) { const f = () => cb(Object.values(demo.lots).filter((l) => l.ownerUid === uid)); demo.subs.add(f); f(); return () => demo.subs.delete(f); }
+  const { db, F } = await init();
+  return F.onSnapshot(F.query(F.collection(db, 'lots'), F.where('ownerUid', '==', uid)), (q) => cb(q.docs.map((d) => ({ id: d.id, ...d.data(), endsAt: ms(d.data().endsAt) }))), () => cb([]));
+}
+// سحب المنتج من المنتجات التالية (قبل بدئه فقط)
+export async function withdrawLot(lotId) {
+  if (DEMO) { delete demo.lots[lotId]; demoEmit(); return; }
+  const { db, F } = await init();
+  await withTimeout(F.deleteDoc(F.doc(db, 'lots', lotId)));
+}
+// بدء مزاد التاجر في قاعته — بشرط ألا يكون فيها مزاد مباشر الآن
+export async function startMyLot(lot) {
+  const min = Math.min(30, Math.max(1, +lot.lotMinutes || 5));
+  if (DEMO) {
+    const cur = demo.lots[demo.auction.currentLotId];
+    if (lotHall(lot) === 'riyadh' && cur && cur.status === 'live' && cur.id !== lot.id && Date.now() < cur.endsAt) throw Object.assign(new Error('busy'), { code: 'busy' });
+    Object.assign(demo.lots[lot.id], { status: 'live', currentPrice: lot.openPrice, endsAt: Date.now() + min * 6e4, leaderUid: null, leaderPaddle: null, bidCount: 0 });
+    if (lotHall(lot) === 'riyadh') Object.assign(demo.auction, { currentLotId: lot.id, status: 'live', title: lot.ownerName });
+    demo.bids[lot.id] = []; demoEmit(); return;
+  }
+  const { db, F } = await init();
+  const auRef = F.doc(db, 'auctions', hallDoc(lotHall(lot)));
+  const au = await F.getDoc(auRef);
+  const curId = au.exists() ? au.data().currentLotId : null;
+  if (curId && curId !== lot.id) {
+    const c = await F.getDoc(F.doc(db, 'lots', curId));
+    if (c.exists() && c.data().status === 'live') {
+      // مزاد سابق انتهى وقته ولم يُغلق بعد: نغلقه أولاً
+      if (Date.now() > ms(c.data().endsAt) + 4000) await closeIfExpired(curId); else throw Object.assign(new Error('busy'), { code: 'busy' });
+    }
+  }
+  const b = F.writeBatch(db);
+  b.update(F.doc(db, 'lots', lot.id), { status: 'live', currentPrice: lot.openPrice, endsAt: F.Timestamp.fromMillis(Date.now() + min * 6e4), leaderUid: null, leaderPaddle: null, bidCount: 0 });
+  b.set(auRef, { currentLotId: lot.id, status: 'live', title: lot.ownerName || '' }, { merge: true });
+  await withTimeout(b.commit());
+}
+// إغلاق تلقائي من أي متصفح مفتوح على القاعة بعد انتهاء الوقت: ترسية على صاحب أعلى مزايدة
+export async function closeIfExpired(lotId) {
+  if (DEMO) {
+    const l = demo.lots[lotId]; if (!l || l.status !== 'live' || Date.now() < l.endsAt + 3000) return null;
+    l.status = l.leaderUid ? 'sold' : 'unsold';
+    if (l.leaderUid) demoWins[lotId] = { lotId, lotName: l.name, uid: l.leaderUid, paddle: l.leaderPaddle, amount: l.currentPrice, status: 'awaiting_payment' };
+    demoEmit(); return l.status;
+  }
+  const { db, F } = await init();
+  return F.runTransaction(db, async (tx) => {
+    const ref = F.doc(db, 'lots', lotId); const s = await tx.get(ref); if (!s.exists()) return null;
+    const d = s.data(); if (d.status !== 'live' || Date.now() < ms(d.endsAt) + 3000) return null;
+    const sold = !!d.leaderUid;
+    tx.update(ref, { status: sold ? 'sold' : 'unsold', closedBy: 'auto', closedAt: F.serverTimestamp() });
+    if (sold) tx.set(F.doc(db, 'wins', lotId), { lotId, lotName: d.name, lotNo: d.no || 0, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: 5, seller: d.ownerName || '', sellerUid: d.ownerUid || '', hall: lotHall(d), status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + 2 * 864e5 });
+    return sold ? 'sold' : 'unsold';
+  });
 }
