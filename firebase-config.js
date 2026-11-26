@@ -52,5 +52,6 @@ export const HALLS = [
   { id: 'hijaz',  name: 'قاعة الحجاز', img: 'hall-hijaz.jpg' },
   { id: 'east',   name: 'قاعة الشرق',  img: 'hall-east.jpg' },
   { id: 'south',  name: 'قاعة الجنوب', img: 'hall-south.jpg' },
-  { id: 'north',  name: 'قاعة الشمال', img: 'hall-north.jpg' }
+  { id: 'north',  name: 'قاعة الشمال', img: 'hall-north.jpg' },
+  { id: 'intl',   name: 'القاعة الدولية', img: 'hall-intl.jpg' }
 ];
