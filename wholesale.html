@@ -14,14 +14,22 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=50">
+<style>
+.feat{display:flex;flex-direction:column;align-items:center;gap:4px;padding:18px 10px;text-align:center;cursor:pointer;font:inherit;color:inherit;transition:transform .15s,border-color .15s}
+.feat:hover{transform:translateY(-2px);border-color:#C9A45C}
+.feat-t{font-size:14px;font-weight:700;margin-top:4px}
+.feat-s{font-size:12px;color:var(--muted,#8A7660)}
+.check{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:#B8913F}
+</style>
 </head>
 <body data-page="wholesale">
 <section style="background:var(--soft);border-bottom:1px solid var(--line)"><div class="wrap" style="display:flex;flex-wrap:wrap;gap:32px;align-items:center;justify-content:space-between;padding-top:48px;padding-bottom:48px">
   <h1 style="font-size:48px">الجملة من المعتق</h1>
   <div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;flex:0 1 460px">
-    <div class="panel" style="padding:18px;text-align:center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:auto"><path d="M6 3h9l3 3v15H6V3Z"/><path d="M9 10h6M9 14h6M9 18h3"/></svg><div style="font-size:14px;margin-top:6px">فاتورة ضريبية</div></div>
-    <div class="panel" style="padding:18px;text-align:center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:auto"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><div style="font-size:14px;margin-top:6px">شحن للمحلات</div></div>
-    <div class="panel" style="padding:18px;text-align:center"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" style="margin:auto"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><div style="font-size:14px;margin-top:6px">متابعة مباشرة</div></div>
+    <button type="button" class="panel feat" data-f="inv"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:auto"><path d="M6 3h9l3 3v15H6V3Z"/><path d="M9 10h6M9 14h6M9 18h3"/></svg><span class="feat-t">فاتورة ضريبية</span><span class="feat-s">تُصدر مع كل طلب</span></button>
+    <button type="button" class="panel feat" data-f="ship"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin:auto"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><span class="feat-t">شحن للمحلات</span><span class="feat-s">لكل مدن المملكة</span></button>
+    <button type="button" class="panel feat" data-f="wa"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A45C" stroke-width="1.6" stroke-linecap="round" style="margin:auto"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><span class="feat-t">متابعة مباشرة</span><span class="feat-s">واتساب مع المندوب</span></button>
   </div>
 </div></section>
 
@@ -50,6 +58,10 @@
           <label class="field">المنتج<select name="product" id="prodSel"></select></label>
           <label class="field">الكمية (كجم)<input name="qty" type="number" min="1" value="5" required></label>
         </div>
+        <label class="check"><input type="checkbox" name="invoice" id="cInv"> أحتاج فاتورة ضريبية</label>
+        <div class="hidden" id="invBox"><label class="field">الرقم الضريبي (15 رقماً)<input name="vat" inputmode="numeric" maxlength="15" placeholder="3xxxxxxxxxxxxx3"></label></div>
+        <label class="check"><input type="checkbox" name="shipping" id="cShip"> أحتاج شحن للمحل</label>
+        <div class="hidden" id="shipBox"><div class="row2"><label class="field">المدينة<input name="city" placeholder="مثال: جدة"></label><label class="field">الحي / العنوان<input name="address" placeholder="الحي، الشارع"></label></div></div>
         <label class="field">ملاحظات<textarea name="notes" rows="3" placeholder="الدرجة المطلوبة، موعد التسليم…"></textarea></label>
         <div class="msg hidden" id="qMsg"></div>
         <button class="btn btn-gold" type="submit">أرسل الطلب</button>
@@ -59,19 +71,35 @@
 </div>
 <script type="module">
 import { currentUser, esc, fmt } from './layout.js';
-import { getWholesale, submitQuote } from './db.js';
+import { getWholesale, submitQuote, watchSettings } from './db.js';
 const rows = await getWholesale();
 const cell = (v) => (v == null ? '[السعر]' : fmt(v));
 document.getElementById('rows').innerHTML = rows.map((r) => `<tr><th scope="row">${esc(r.name)}<div class="muted" style="font-size:13px;font-weight:400">${esc(r.origin)}</div></th><td class="muted">${esc(r.moq)}</td><td>${cell(r.p1)}</td><td>${cell(r.p2)}</td><td class="gold" style="font-weight:600">${cell(r.p3)}</td></tr>`).join('');
 document.getElementById('prodSel').innerHTML = rows.map((r) => `<option>${esc(r.name)}</option>`).join('');
 const f = document.getElementById('quote'), m = document.getElementById('qMsg');
+// الخيارات: فاتورة ضريبية / شحن / متابعة مباشرة عبر واتساب
+let WA = '';
+watchSettings((c) => { const n = String(c.whatsappIntl || c.whatsapp || '').replace(/\D/g, '').replace(/^0/, ''); WA = n ? (n.startsWith('966') ? n : '966' + n) : ''; });
+const syncBoxes = () => { document.getElementById('invBox').classList.toggle('hidden', !f.invoice.checked); document.getElementById('shipBox').classList.toggle('hidden', !f.shipping.checked); };
+f.invoice.onchange = f.shipping.onchange = syncBoxes;
+document.querySelectorAll('.feat').forEach((b) => b.onclick = () => {
+  const k = b.dataset.f;
+  if (k === 'wa') { if (!WA) { show('رقم الواتساب غير مضاف بعد', false); return; } window.open(`https://wa.me/${WA}?text=${encodeURIComponent('السلام عليكم، أرغب في الاستفسار عن أسعار الجملة لدى المعتق للعود.')}`, '_blank'); return; }
+  (k === 'inv' ? f.invoice : f.shipping).checked = true; syncBoxes();
+  f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => (k === 'inv' ? f.vat : f.city).focus({ preventScroll: true }), 500);
+});
+const show = (t, ok) => { m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
 f.onsubmit = async (e) => {
   e.preventDefault();
   const d = Object.fromEntries(new FormData(f));
-  const show = (t, ok) => { m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
   if (!d.company || !/^05\d{8}$/.test(d.phone) || !(+d.qty > 0)) return show('أكمل اسم المنشأة والجوال (05xxxxxxxx) والكمية', false);
+  d.invoice = f.invoice.checked; d.shipping = f.shipping.checked;
+  if (d.invoice && !/^3\d{13}3$/.test(d.vat || '')) return show('الرقم الضريبي 15 رقماً ويبدأ وينتهي بالرقم 3', false);
+  if (d.shipping && !d.city) return show('اكتب مدينة الشحن', false);
+  if (!d.invoice) delete d.vat; if (!d.shipping) { delete d.city; delete d.address; }
   f.querySelector('[type=submit]').disabled = true;
-  try { await submitQuote({ ...d, qty: +d.qty, uid: currentUser?.uid || null }); f.reset(); show('وصلنا طلبك، وسنتواصل معك قريباً.', true); }
+  try { await submitQuote({ ...d, qty: +d.qty, uid: currentUser?.uid || null }); f.reset(); syncBoxes(); show('وصلنا طلبك، وسنتواصل معك قريباً.', true); }
   catch { show('تعذّر إرسال الطلب، حاول مرة أخرى', false); }
   finally { f.querySelector('[type=submit]').disabled = false; }
 };
