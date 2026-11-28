@@ -482,3 +482,14 @@ tbody tr:nth-child(even){background:var(--soft)}
 .live-sound{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:2;border:0;border-radius:999px;padding:8px 16px;background:rgba(255,255,255,.92);color:#2A1A0E;font:inherit;font-weight:700;cursor:pointer}
 .live-foot{display:flex;justify-content:flex-end;margin-top:10px}
 #liveAdmin .live-stage{max-width:560px}
+/* أيقونة البث العائمة + توسيع الشاشة */
+.live-pill{position:fixed;z-index:60;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border:0;border-radius:999px;background:#0d0d0d;color:#fff;font:600 13px/1 system-ui,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer}
+.live-pill i{width:8px;height:8px;border-radius:50%;background:#ff3b30;animation:hblink 1.2s infinite}
+.live-pill:focus-visible{outline:3px solid #C9A45C;outline-offset:3px}
+.live-modal{max-width:760px;width:min(96vw,760px);padding:14px;background:#1A110A}
+.live-modal{position:relative}.live-modal{padding-top:58px!important}.live-modal .close{position:absolute;top:10px;left:10px;z-index:5;width:38px;height:38px;border-radius:50%;background:#0d0d0d;color:#fff;border:2px solid #C9A45C;font-size:20px;line-height:1}
+.lv-box .live-box{border:0;box-shadow:none;padding:0}
+.live-fs{position:absolute;z-index:3;top:10px;left:10px;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:10px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
+.live-stage:fullscreen,.live-stage:-webkit-full-screen{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0}
+.live-stage.live-max{position:fixed;inset:0;z-index:1000;width:100vw;height:100dvh;aspect-ratio:auto;border-radius:0}
+@media (prefers-reduced-motion:reduce){.live-pill i{animation:none}}

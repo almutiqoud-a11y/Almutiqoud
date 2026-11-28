@@ -37,8 +37,6 @@
     <div class="hero-media"><img src="hero-oud.jpg" alt="المعتق للعود — عود معتق" width="1000" height="1000"></div>
   </div></section>
 
-  <section class="section hidden" id="liveSec" style="padding-bottom:0"><div class="wrap"><div id="liveHome"></div></div></section>
-
   <section class="section"><div class="wrap">
     <div class="section-title"><h2>قاعات المزاد</h2><p>ست قاعات في مناطق المملكة والقاعة الدولية — اختر قاعتك وزايد مباشرة</p></div>
     <div class="halls" id="halls" style="scroll-margin-top:90px"></div>
@@ -111,7 +109,6 @@ watchAuction((a) => {
   document.getElementById('cd').classList.toggle('hidden', !startAt);
 });
 // البث المباشر في الرئيسية
-import('./live.js').then((m) => { const box = document.getElementById('liveHome'); m.mountViewer(box); new MutationObserver(() => document.getElementById('liveSec').classList.toggle('hidden', box.classList.contains('hidden'))).observe(box, { attributes: true, attributeFilter: ['class'] }); });
 // بطاقات القاعات: حالة كل قاعة مباشرة من مزادها
 const hallsBox = document.getElementById('halls');
 hallsBox.innerHTML = HALLS.map((h) => `<a class="hall-card" href="auction.html?hall=${h.id}" aria-label="${h.name}"><img src="${h.img}" alt="${h.name}" loading="lazy"><span class="hall-st none" id="hs-${h.id}">لا يوجد مزاد</span><span class="hall-go"><span>ادخل القاعة</span><span aria-hidden="true">←</span></span></a>`).join('');

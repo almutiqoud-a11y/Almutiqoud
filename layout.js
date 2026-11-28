@@ -302,3 +302,6 @@ export function openForgot(phone = '') {
   };
 }
 window.addEventListener('account-deleted', () => toast('تم حذف هذا الحساب من المنصة. للاستفسار تواصل مع الإدارة.'));
+
+// أيقونة البث العائمة في كل الصفحات (ما عدا لوحة التحكم)
+if (!/admin\.html/.test(location.pathname)) import('./live.js').then((m) => m.mountFloating()).catch(() => {});

@@ -46,6 +46,19 @@ async function getToken(role) {
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/* -------- توسيع الشاشة -------- */
+function toggleFull(stage) {
+  const d = document;
+  if (d.fullscreenElement || d.webkitFullscreenElement) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return; }
+  if (stage.classList.contains('live-max')) { stage.classList.remove('live-max'); d.body.style.overflow = ''; return; }
+  const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+  if (req) { try { const r = req.call(stage); if (r && r.catch) r.catch(() => fake()); return; } catch {} }
+  const v = stage.querySelector('video');
+  if (v && v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); return; } catch {} }
+  fake();
+  function fake() { stage.classList.add('live-max'); d.body.style.overflow = 'hidden'; }
+}
+
 /* -------- المشاهد -------- */
 // يركّب مشغّل البث داخل box ويظهره فقط وقت البث
 export function mountViewer(box, { hall = null, compact = false } = {}) {
@@ -53,10 +66,12 @@ export function mountViewer(box, { hall = null, compact = false } = {}) {
   box.classList.add('live-box', 'hidden');
   box.innerHTML = `<div class="live-head"><span class="live-dot"><i></i>بث مباشر</span><b class="live-title"></b><span class="live-hall"></span></div>
     <div class="live-stage"><div class="live-video"></div><div class="live-wait">جارِ الاتصال بالبث…</div>
-    <button type="button" class="live-sound hidden">🔊 اضغط لتشغيل الصوت</button></div>
+    <button type="button" class="live-sound hidden">🔊 اضغط لتشغيل الصوت</button>
+    <button type="button" class="live-fs" aria-label="توسيع الشاشة" title="توسيع الشاشة"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
     ${compact ? '' : '<div class="live-foot"><a class="btn btn-gold btn-sm live-enter" href="#">ادخل القاعة وزايد</a></div>'}`;
   const vid = box.querySelector('.live-video'), wait = box.querySelector('.live-wait'), snd = box.querySelector('.live-sound');
   snd.onclick = () => { try { audio && audio.play(); snd.classList.add('hidden'); } catch {} };
+  box.querySelector('.live-fs').onclick = () => toggleFull(box.querySelector('.live-stage'));
 
   async function join() {
     if (joined) return; joined = true;
@@ -138,7 +153,7 @@ export function mountBroadcaster(box, { hall, host = null, title = '', onEnd = n
       console.error(e); if (live) { try { await setLive({ on: false, ...hostInfo }); } catch {} } await stop(true);
       msg(e.code === 'signin' ? 'سجّل الدخول أولاً ثم حاول مرة أخرى' : e.code === 'notapproved' ? 'البث يحتاج موافقة الإدارة أولاً' : e.code === 'token' ? 'خدمة البث غير جاهزة بعد — تواصل مع الإدارة'
         : /PERMISSION|NotAllowed/i.test(String(e.name || e.code || e.message)) ? 'اسمح للمتصفح باستخدام الكاميرا والميكروفون ثم حاول مرة أخرى'
-        : 'تعذّر بدء البث: ' + (e.code || e.message || e), false);
+        : 'تعذّر بدء البث: ' + (e.code || '') + ' — ' + String(e.message || e).slice(0, 220), false);
     } finally { b.disabled = false; if (!live) b.textContent = '● ابدأ البث'; }
   }
   async function stop(silent) {
@@ -246,4 +261,28 @@ export function mountLiveRequests(box) {
   watchLiveRequests((x) => { rs = x; draw(rs); });
   watchLive((l) => { cur = l; draw(rs); });
   box.addEventListener('click', async (e) => { const b = e.target.closest('[data-lv]'); if (!b) return; b.disabled = true; try { await decideLive(b.dataset.u, b.dataset.lv); } catch (x) { console.error(x); b.disabled = false; } });
+}
+
+/* -------- أيقونة البث العائمة: بيضاوية سوداء صغيرة في طرف الشاشة -------- */
+// لا تتصل بالبث إلا عند الضغط عليها (توفيراً لدقائق المشاهدة)
+export function mountFloating() {
+  if (document.getElementById('livePill')) return;
+  const pill = document.createElement('button');
+  pill.type = 'button'; pill.id = 'livePill'; pill.className = 'live-pill hidden';
+  pill.setAttribute('aria-label', 'مشاهدة البث المباشر');
+  pill.innerHTML = '<i></i><span>بث مباشر</span>';
+  document.body.appendChild(pill);
+  let cur = { on: false }, open = null;
+  watchLive((l) => { cur = l; pill.classList.toggle('hidden', !l.on); if (!l.on && open) open.close(); });
+  pill.onclick = () => {
+    if (open) return;
+    const o = document.createElement('div'); o.className = 'overlay live-ov';
+    o.innerHTML = `<div class="modal live-modal" role="dialog" aria-modal="true" aria-label="البث المباشر"><button class="icon-btn close" aria-label="إغلاق">×</button><div class="lv-box"></div></div>`;
+    document.body.appendChild(o);
+    mountViewer(o.querySelector('.lv-box'));
+    const close = () => { o.remove(); open = null; };
+    open = { close };
+    o.querySelector('.close').onclick = close;
+    o.addEventListener('click', (e) => { if (e.target === o) close(); });
+  };
 }
