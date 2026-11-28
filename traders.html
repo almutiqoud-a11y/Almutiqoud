@@ -78,6 +78,7 @@
     <section data-p="mine" class="hidden">
       <div class="layout">
         <main>
+          <div class="panel" id="trLive" style="margin-bottom:22px"></div>
           <h2 style="font-size:26px;color:var(--gold-dark);margin-bottom:14px">منتجاتي</h2>
           <div class="grid g4" id="mineGrid"></div>
           <p class="muted hidden" id="mineEmpty">لم تضف منتجات بعد.</p>
@@ -172,6 +173,7 @@ const waNum = (p) => { p = String(p || '').replace(/[^\d+]/g, ''); if (p.startsW
 async function load() {
   [dir, lst] = await Promise.all([getDirectory(), getListings()]);
   watchMyLots(currentUser.uid, (ls) => { myLots = ls; drawMine(); });
+  import('./live.js').then((m) => m.mountTraderLive($('trLive'), currentUser));
   drawDir(); drawLst(); drawMine();
 }
 $('dq').oninput = drawDir; $('dc').onchange = drawDir; $('lq').oninput = drawLst; $('lc').onchange = drawLst;

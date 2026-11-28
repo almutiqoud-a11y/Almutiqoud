@@ -160,7 +160,29 @@ service cloud.firestore {
     }
 
     // إعدادات الموقع (بيانات البنك والتواصل)
-    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+      // بث التاجر: بعد موافقة الإدارة فقط، ولا يقاطع بثاً شغّالاً لغيره
+      allow create, update: if id == 'live' && signedIn()
+        && get(/databases/$(database)/documents/liveRequests/$(request.auth.uid)).data.status == 'approved'
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['on', 'hall', 'title', 'startedAt', 'updatedAt', 'hostUid', 'hostName'])
+        && request.resource.data.on is bool
+        && (resource == null || resource.data.get('on', false) == false || resource.data.get('hostUid', '') == request.auth.uid);
+    }
+    // طلبات البث من التجار
+    match /liveRequests/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid && isApproved()
+        && request.resource.data.uid == uid && request.resource.data.status == 'pending'
+        && (resource == null || resource.data.status != 'approved');
+      // التاجر يُنهي موافقته بعد انتهاء بثه
+      allow update: if signedIn() && request.auth.uid == uid && resource.data.status == 'approved'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'used';
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && resource.data.status == 'pending');
+      allow update: if isAdmin();
+    }
 
     match /products/{id} { allow read: if true; allow write: if isAdmin(); }
     match /wholesale/{id} { allow read: if true; allow write: if isAdmin(); }

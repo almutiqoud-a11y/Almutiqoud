@@ -49,6 +49,8 @@
       <div class="panel" style="margin-bottom:20px"><h3 style="margin-bottom:10px">اختر القاعة</h3>
         <nav class="hallbar" id="hallBar" aria-label="قاعات المزاد"></nav>
         <p class="muted" style="margin:6px 0 0;font-size:13px">كل قاعة لها مزادها ومنتجاتها وحضورها. الإعدادات والمنتجات تحت تخص القاعة المختارة فقط.</p></div>
+      <div class="panel" id="liveReqs" style="margin-bottom:20px"></div>
+      <div class="panel" id="liveAdmin" style="margin-bottom:20px"></div>
       <div class="layout">
         <main>
           <div class="panel" style="margin-bottom:20px">
@@ -144,6 +146,7 @@ import { PAYMENT } from './firebase-config.js';
 import { HALLS, hallOf, hallDoc, admin, DEMO, watchSettings, saveSettings, watchAllChats, watchMessages, uploadMedia, MAX_VIDEO_MB } from './db.js';
 // القاعة المختارة في لوحة التحكم: admin.html?hall=riyadh
 const HALL = hallOf(new URLSearchParams(location.search).get('hall')).id;
+import('./live.js').then((m) => { m.mountBroadcaster(document.getElementById('liveAdmin'), { hall: HALL }); });
 document.getElementById('hallNm').textContent = hallOf(HALL).name;
 document.getElementById('hallBar').innerHTML = HALLS.map((h) => `<a class="hb ${h.id === HALL ? 'on' : ''}" href="admin.html?hall=${h.id}"><img src="${h.img}" alt="">${h.name}</a>`).join('');
 const $ = (id) => document.getElementById(id);
@@ -153,7 +156,7 @@ onCurrentUser(async (u) => {
   if (!u) { $('gate').textContent = 'سجّل الدخول بحساب المدير.'; return; }
   if (!u.isAdmin) { $('gate').textContent = 'هذا الحساب ليس حساب مدير.'; return; }
   $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
-  if (!started) { started = true; start(await admin()); }
+  if (!started) { started = true; start(await admin()); import('./live.js').then((m) => m.mountLiveRequests($('liveReqs'))); }
 });
 
 document.querySelector('.adm-tabs').onclick = (e) => {

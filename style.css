@@ -467,3 +467,18 @@ tbody tr:nth-child(even){background:var(--soft)}
 .hall-intro span{color:#fff;font-size:clamp(13px,1.6vw,17px)}
 .hall-intro.on{animation:hallIn 3.2s ease forwards}
 @keyframes hallIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.9)}12%,75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+
+/* ===== البث المباشر ===== */
+.live-box{background:#1A110A;border:2px solid #C9A45C;border-radius:20px;padding:12px;color:#fff;box-shadow:0 10px 30px rgba(26,17,10,.25)}
+.live-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.live-dot{display:inline-flex;align-items:center;gap:6px;background:#B3261E;color:#fff;font-weight:700;font-size:13px;padding:3px 12px;border-radius:999px}
+.live-dot i{width:8px;height:8px;border-radius:50%;background:#fff;animation:hblink 1.2s infinite}
+.live-title{font-family:var(--fh);font-size:18px;color:#E8C77E}
+.live-hall{font-size:13px;color:#d9c9ac;margin-inline-start:auto}
+.live-stage{position:relative;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
+.live-video{position:absolute;inset:0}
+.live-video video{object-fit:contain!important}
+.live-wait{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:#d9c9ac;font-size:14px}
+.live-sound{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:2;border:0;border-radius:999px;padding:8px 16px;background:rgba(255,255,255,.92);color:#2A1A0E;font:inherit;font-weight:700;cursor:pointer}
+.live-foot{display:flex;justify-content:flex-end;margin-top:10px}
+#liveAdmin .live-stage{max-width:560px}
