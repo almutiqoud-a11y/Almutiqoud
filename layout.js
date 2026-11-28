@@ -1,5 +1,5 @@
 // الهيدر والفوتر ونافذة الدخول والسلة — مشتركة بين كل الصفحات
-import { onUser, signIn, signUp, signOutUser, submitOrder, DEMO, watchSettings, completeProfile } from './db.js';
+import { onUser, signIn, signUp, signOutUser, submitOrder, DEMO, watchSettings, completeProfile, requestReset } from './db.js';
 import { CONTACT } from './firebase-config.js';
 
 export const icons = {
@@ -111,7 +111,7 @@ export function openAuth(mode = 'in') {
       <label class="field">رمز الدخول<input name="password" type="password" minlength="6" placeholder="6 أحرف أو أرقام على الأقل" autocomplete="current-password"></label>
       <div class="msg err hidden"></div>
       <button class="btn btn-gold" type="submit">دخول</button>
-      <p class="muted in" style="margin:0;font-size:13px;text-align:center">نسيت رمز الدخول؟ تواصل معنا على واتساب.</p>
+      <button type="button" class="linkbtn in" id="forgotBtn" style="margin:0 auto;font-size:14px;background:none;border:0;color:var(--gold-dark);text-decoration:underline;cursor:pointer;font:inherit">نسيت رمز الدخول؟</button>
       <p class="muted up" style="margin:0;font-size:13px">يُخصص لك رقم مزايدة دائم فور التسجيل.</p>
     </form></div>`;
   document.body.appendChild(o);
@@ -125,6 +125,7 @@ export function openAuth(mode = 'in') {
   o.querySelectorAll('.tabs2 .chip').forEach((b) => (b.onclick = () => set(b.dataset.m)));
   const close = () => o.remove();
   o.querySelector('.close').onclick = close; o.onclick = (e) => { if (e.target === o) close(); };
+  o.querySelector('#forgotBtn').onclick = () => { close(); openForgot(f.phone.value); };
   f.onsubmit = async (e) => {
     e.preventDefault(); err.classList.add('hidden');
     const d = Object.fromEntries(new FormData(f)); d.phone = String(d.phone || '').trim();
@@ -269,3 +270,35 @@ export function shrinkImage(file, max = 1000, q = 0.72) {
     o.addEventListener('click', (e) => { if (e.target === o) close(); });
   };
 })();
+
+/* ---------------- نسيت رمز الدخول ---------------- */
+let WA_ADMIN = '';
+watchSettings((c) => { const n = String(c.whatsappIntl || c.whatsapp || '').replace(/\D/g, '').replace(/^0/, ''); WA_ADMIN = n ? (n.startsWith('966') ? n : '966' + n) : ''; });
+export function openForgot(phone = '') {
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="fgT" style="max-width:420px">
+    <button class="icon-btn close" aria-label="إغلاق">${icons.x}</button>
+    <h2 id="fgT">استعادة رمز الدخول</h2>
+    <p class="muted" style="margin-top:-4px">اكتب رقم جوالك المسجّل، وترسل لك الإدارة رمز دخول جديداً على واتساب بعد التحقق.</p>
+    <form class="form" novalidate>
+      <label class="field">رقم الجوال<input name="phone" type="tel" placeholder="05xxxxxxxx" dir="ltr" style="text-align:right" value="${String(phone).replace(/[^\d]/g, '').slice(0, 10)}"></label>
+      <div class="msg hidden" role="alert"></div>
+      <button class="btn btn-gold" type="submit">أرسل الطلب</button>
+    </form></div>`;
+  document.body.appendChild(o);
+  const close = () => o.remove();
+  o.querySelector('.close').onclick = close; o.onclick = (e) => { if (e.target === o) close(); };
+  const f = o.querySelector('form'), m = o.querySelector('.msg'), b = f.querySelector('button');
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const ph = f.phone.value.replace(/[^\d]/g, '');
+    if (!/^05\d{8}$/.test(ph)) { m.className = 'msg err'; m.textContent = 'اكتب رقم الجوال بصيغة 05xxxxxxxx'; return; }
+    b.disabled = true;
+    try {
+      await requestReset(ph);
+      m.className = 'msg ok'; m.textContent = 'وصل طلبك ✓ ستتواصل معك الإدارة على واتساب برمز جديد.';
+      b.textContent = 'تواصل مع الإدارة على واتساب'; b.disabled = false; b.type = 'button';
+      b.onclick = () => { if (WA_ADMIN) window.open(`https://wa.me/${WA_ADMIN}?text=${encodeURIComponent('السلام عليكم، نسيت رمز الدخول لحسابي في المعتق للعود. رقم جوالي: ' + ph)}`, '_blank'); close(); };
+    } catch (x) { console.error(x); m.className = 'msg err'; m.textContent = 'تعذّر إرسال الطلب، حاول مرة أخرى'; b.disabled = false; }
+  };
+}
+window.addEventListener('account-deleted', () => toast('تم حذف هذا الحساب من المنصة. للاستفسار تواصل مع الإدارة.'));

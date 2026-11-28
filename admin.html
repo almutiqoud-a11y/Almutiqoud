@@ -111,10 +111,14 @@
       <div id="comSum" class="msg ok" style="margin-bottom:12px"></div>
       <p class="muted" style="margin:-4px 0 12px;font-size:14px">تُسجَّل الترسية تلقائياً عند انتهاء الوقت. أرسل للفائز رسالة التهنئة وبيانات التحويل، ثم حدّث الحالة عند استلام المبلغ.</p>
       <div class="table-box"><table><thead><tr><th>التاريخ</th><th>المنتج</th><th>المضرب</th><th>الفائز</th><th>المبلغ</th><th>عمولة المنصة</th><th>صافي التاجر</th><th>الإيصال</th><th>الحالة</th><th></th></tr></thead><tbody id="winRows"></tbody></table></div></div></section>
-    <section data-p="members" class="hidden"><div class="panel">
+    <section data-p="members" class="hidden">
+      <div class="panel hidden" id="rstBox" style="margin-bottom:20px"><h3>طلبات استعادة رمز الدخول</h3>
+        <p class="muted" style="margin:-4px 0 12px;font-size:14px">تأكد من صاحب الرقم (مثلاً برسالة واتساب منه)، ثم عيّن له رمزاً جديداً وأرسله له.</p>
+        <div class="table-box"><table><thead><tr><th>الجوال</th><th>العضو</th><th>وقت الطلب</th><th></th></tr></thead><tbody id="rstRows"></tbody></table></div></div>
+      <div class="panel">
       <h3>الأعضاء والاعتماد</h3>
       <p class="muted" style="margin:-4px 0 12px;font-size:14px">راجع رقم وثيقة العمل الحر أو السجل التجاري، ثم اعتمد العضو ليظهر في «دليل التجار» ويدخل قسم التجار والمراسلة.</p>
-      <div class="chips" id="memFilter" style="margin-bottom:12px"><button class="chip" data-f="pending" aria-pressed="true">بانتظار الاعتماد</button><button class="chip" data-f="approved">المعتمدون</button><button class="chip" data-f="rejected">المرفوضون</button><button class="chip" data-f="none">بدون بيانات</button><button class="chip" data-f="all">الكل</button></div>
+      <div class="chips" id="memFilter" style="margin-bottom:12px"><button class="chip" data-f="pending" aria-pressed="true">بانتظار الاعتماد</button><button class="chip" data-f="approved">المعتمدون</button><button class="chip" data-f="rejected">المرفوضون</button><button class="chip" data-f="none">بدون بيانات</button><button class="chip" data-f="deleted">المحذوفون</button><button class="chip" data-f="all">الكل</button></div>
       <div class="table-box"><table><thead><tr><th>العضو</th><th>النوع</th><th>رقم الوثيقة / السجل</th><th>الدولة</th><th>الجوال</th><th>المضرب</th><th>الحالة</th><th></th></tr></thead><tbody id="memRows"></tbody></table></div>
     </div></section>
     <section data-p="chats" class="hidden"><div class="panel">
@@ -143,7 +147,7 @@
 <script type="module">
 import { onCurrentUser, esc, fmt, toast, icons } from './layout.js';
 import { PAYMENT } from './firebase-config.js';
-import { HALLS, hallOf, hallDoc, admin, DEMO, watchSettings, saveSettings, watchAllChats, watchMessages, uploadMedia, MAX_VIDEO_MB } from './db.js';
+import { HALLS, hallOf, hallDoc, admin, DEMO, adminCall, watchSettings, saveSettings, watchAllChats, watchMessages, uploadMedia, MAX_VIDEO_MB } from './db.js';
 // القاعة المختارة في لوحة التحكم: admin.html?hall=riyadh
 const HALL = hallOf(new URLSearchParams(location.search).get('hall')).id;
 import('./live.js').then((m) => { m.mountBroadcaster(document.getElementById('liveAdmin'), { hall: HALL }); });
@@ -312,18 +316,21 @@ function start({ db, F }) {
 
   // الأعضاء والاعتماد
   let members = [], memF = 'pending';
-  const TYPE = { individual: 'فرد — عمل حر', trader: 'تاجر — سجل تجاري' }, MST = { pending: 'بانتظار الاعتماد', approved: 'معتمد', rejected: 'مرفوض' };
+  const TYPE = { individual: 'فرد — عمل حر', trader: 'تاجر — سجل تجاري' }, MST = { deleted: 'محذوف', pending: 'بانتظار الاعتماد', approved: 'معتمد', rejected: 'مرفوض' };
   F.onSnapshot(col('users'), (q) => { members = q.docs.map((d) => ({ uid: d.id, ...d.data() })); drawMembers(); });
   $('memFilter').onclick = (e) => { const b = e.target.closest('[data-f]'); if (!b) return; memF = b.dataset.f; $('memFilter').querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', x === b)); drawMembers(); };
   function drawMembers() {
-    const list = members.filter((m) => memF === 'all' || (memF === 'none' ? !m.type : m.status === memF)).sort((x, y) => (ms(y.createdAt) || 0) - (ms(x.createdAt) || 0));
+    const list = members.filter((m) => memF === 'deleted' ? m.status === 'deleted' : m.status !== 'deleted' && (memF === 'all' || (memF === 'none' ? !m.type : m.status === memF))).sort((x, y) => (ms(y.createdAt) || 0) - (ms(x.createdAt) || 0));
     $('memRows').innerHTML = list.map((m) => `<tr><td><b>${esc(m.company || m.name || '—')}</b>${m.company ? `<div class="muted" style="font-size:12px">${esc(m.name)}</div>` : ''}<div class="muted" style="font-size:12px">${esc(m.email || '')}</div></td>
       <td>${TYPE[m.type] || '<span class="muted">لم يُكمل</span>'}</td><td dir="ltr" style="text-align:right">${esc(m.docNo || '—')}</td><td>${esc(m.country || '')}${m.city ? ' • ' + esc(m.city) : ''}</td>
       <td dir="ltr" style="text-align:right">${esc(m.phone || '')}</td><td>${esc(m.paddle ?? '')}</td><td><span class="st">${MST[m.status] || '—'}</span></td>
-      <td style="white-space:nowrap">${m.type && m.status !== 'approved' ? `<button class="btn btn-gold" data-ap="${m.uid}">اعتماد</button>` : ''} ${m.status !== 'rejected' && m.type ? `<button class="btn btn-line" data-rj="${m.uid}">${m.status === 'approved' ? 'إيقاف' : 'رفض'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">لا يوجد أعضاء في هذه القائمة.</td></tr>';
+      <td style="white-space:nowrap">${m.type && m.status !== 'approved' ? `<button class="btn btn-gold" data-ap="${m.uid}">اعتماد</button>` : ''} ${m.status !== 'rejected' && m.type ? `<button class="btn btn-line" data-rj="${m.uid}">${m.status === 'approved' ? 'إيقاف' : 'رفض'}</button>` : ''}${m.status !== 'deleted' ? ` <button class="btn btn-line" data-pw="${m.uid}" title="رمز دخول جديد" aria-label="رمز دخول جديد">🔑</button> <button class="btn btn-line" data-del="${m.uid}" title="حذف العضو" aria-label="حذف العضو" style="color:#B3261E;border-color:#B3261E"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">لا يوجد أعضاء في هذه القائمة.</td></tr>';
   }
   $('memRows').onclick = async (e) => {
     const ap = e.target.closest('[data-ap]'), rj = e.target.closest('[data-rj]');
+    const pw = e.target.closest('[data-pw]'), dl = e.target.closest('[data-del]');
+    if (pw) { setPin(members.find((x) => x.uid === pw.dataset.pw)); return; }
+    if (dl) { delMember(dl, members.find((x) => x.uid === dl.dataset.del)); return; }
     try {
       if (ap) { const m = members.find((x) => x.uid === ap.dataset.ap);
         await F.updateDoc(F.doc(db, 'users', m.uid), { status: 'approved' });
@@ -333,6 +340,65 @@ function start({ db, F }) {
         await F.updateDoc(F.doc(db, 'users', rj.dataset.rj), { status: 'rejected' });
         await F.deleteDoc(F.doc(db, 'directory', rj.dataset.rj)); toast('تم'); }
     } catch (x) { toast('تعذّر التحديث'); console.error(x); }
+  };
+
+  // رمز دخول جديد للعضو (عبر خدمة Cloudflare) ثم إرساله له على واتساب
+  const waOf = (ph) => { ph = String(ph || '').replace(/\D/g, '').replace(/^0/, ''); return ph ? (ph.startsWith('966') ? ph : '966' + ph) : ''; };
+  function setPin(m, onDone) {
+    if (!m) { toast('لم يُعثر على عضو بهذا الرقم'); return; }
+    const pin = String(Math.floor(100000 + Math.random() * 900000));
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="max-width:420px"><button class="icon-btn close" aria-label="إغلاق">×</button>
+      <h2>رمز دخول جديد</h2><p class="muted" style="margin-top:-4px">${esc(m.company || m.name || '')} — ${esc(m.phone || '')} — مضرب ${esc(m.paddle ?? '')}</p>
+      <form class="form"><label class="field">الرمز الجديد (6 أرقام أو أحرف على الأقل)<input name="pin" value="${pin}" dir="ltr" style="text-align:center;font-size:22px;letter-spacing:3px" minlength="6" maxlength="32"></label>
+      <button class="btn btn-gold">تعيين الرمز</button><p class="msg hidden" role="alert"></p></form></div>`;
+    document.body.appendChild(o);
+    const close = () => o.remove(); o.querySelector('.close').onclick = close;
+    const f = o.querySelector('form'), msg = o.querySelector('.msg'), b = f.querySelector('button');
+    f.onsubmit = async (e) => {
+      e.preventDefault(); const p = f.pin.value.trim();
+      if (p.length < 6) { msg.className = 'msg err'; msg.textContent = 'الرمز 6 خانات على الأقل'; return; }
+      b.disabled = true;
+      try {
+        await adminCall('set-password', { uid: m.uid, password: p });
+        msg.className = 'msg ok'; msg.textContent = 'تم تعيين الرمز ✓';
+        const wa = waOf(m.phone);
+        b.disabled = false; b.type = 'button'; b.textContent = wa ? 'أرسل الرمز للعضو على واتساب' : 'تم';
+        b.onclick = () => { if (wa) window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`مرحباً ${m.name || ''}، رمز الدخول الجديد لحسابك في المعتق للعود:\n${p}\nسجّل الدخول برقم جوالك وهذا الرمز.`)}`, '_blank'); close(); onDone && onDone(); };
+      } catch (x) {
+        console.error(x); b.disabled = false; msg.className = 'msg err';
+        msg.textContent = x.code === 'service account missing' ? 'أداة الرموز غير مفعّلة بعد (مفتاح حساب الخدمة غير مضاف في Cloudflare)' : x.code === 'admin only' ? 'هذه الأداة للمدير فقط — سجّل الدخول ببريد المدير' : 'تعذّر تعيين الرمز: ' + (x.code || x.message);
+      }
+    };
+  }
+  // حذف العضو: يُحذف حسابه ويُزال من الدليل ومنتجاته
+  async function delMember(btn, m) {
+    if (!m) return;
+    if (!btn.dataset.ok) { btn.dataset.ok = 1; btn.textContent = 'تأكيد الحذف'; setTimeout(() => { if (btn.isConnected) { delete btn.dataset.ok; btn.innerHTML = '🗑'; } }, 5000); return; }
+    btn.disabled = true;
+    let authDeleted = true;
+    try { await adminCall('delete-user', { uid: m.uid }); } catch (x) { authDeleted = false; console.warn('auth delete', x); }
+    try {
+      await F.updateDoc(F.doc(db, 'users', m.uid), { status: 'deleted', deletedAt: F.serverTimestamp() });
+      await F.deleteDoc(F.doc(db, 'directory', m.uid)).catch(() => {});
+      const ls = await F.getDocs(F.query(col('listings'), F.where('owner', '==', m.uid)));
+      await Promise.all(ls.docs.map((d) => F.deleteDoc(d.ref).catch(() => {})));
+      toast(authDeleted ? 'حُذف العضو وحسابه نهائياً' : 'حُذف العضو من المنصة ولن يستطيع الدخول');
+    } catch (x) { console.error(x); btn.disabled = false; toast('تعذّر الحذف'); }
+  }
+  // طلبات استعادة رمز الدخول
+  F.onSnapshot(col('resetRequests'), (q) => {
+    const rs = q.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (ms(b.createdAt) || 0) - (ms(a.createdAt) || 0));
+    $('rstBox').classList.toggle('hidden', !rs.length);
+    const norm = (p) => String(p || '').replace(/\D/g, '').replace(/^966/, '0');
+    $('rstRows').innerHTML = rs.map((r) => { const m = members.find((x) => norm(x.phone) === r.phone && x.status !== 'deleted');
+      return `<tr><td dir="ltr" style="text-align:right">${esc(r.phone)}</td><td>${m ? `<b>${esc(m.company || m.name)}</b><div class="muted" style="font-size:12px">مضرب ${esc(m.paddle ?? '')}</div>` : '<span class="muted">لا يوجد عضو بهذا الرقم</span>'}</td><td>${dt(r.createdAt)}</td>
+      <td style="white-space:nowrap">${m ? `<button class="btn btn-gold" data-rpw="${esc(r.id)}" data-u="${m.uid}">🔑 رمز جديد</button>` : ''} <button class="btn btn-line" data-rdone="${esc(r.id)}">إزالة</button></td></tr>`; }).join('');
+  }, () => {});
+  $('rstRows').onclick = async (e) => {
+    const p = e.target.closest('[data-rpw]'), d = e.target.closest('[data-rdone]');
+    if (p) setPin(members.find((x) => x.uid === p.dataset.u), () => F.deleteDoc(F.doc(db, 'resetRequests', p.dataset.rpw)).catch(() => {}));
+    if (d) await F.deleteDoc(F.doc(db, 'resetRequests', d.dataset.rdone)).catch(() => toast('تعذّر'));
   };
 
   // أرشيف المحادثات (عرض فقط)

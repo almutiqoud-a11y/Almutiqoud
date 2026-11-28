@@ -101,6 +101,8 @@ async function emitUser() {
   let d = {};
   try { const snap = await withTimeout(F.getDoc(F.doc(db, 'users', u.uid)), 15000); d = snap.exists() ? snap.data() : {}; }
   catch (e) { console.error('profile read failed', e); }
+  // حساب حذفته الإدارة: خروج فوري
+  if (d.status === 'deleted') { try { const { auth, A } = await init(); await A.signOut(auth); } catch {} lastAuth = null; try { window.dispatchEvent(new CustomEvent('account-deleted')); } catch {} return userCb(null); }
   userCb({ uid: u.uid, email: u.email, name: d.name || u.displayName || '', phone: d.phone || '', paddle: d.paddle || null,
     type: d.type || '', docNo: d.docNo || '', company: d.company || '', country: d.country || '', city: d.city || '',
     status: d.status || '', pledgeAt: d.pledgeAt || null, pledgePct: d.pledgePct ?? null, isAdmin: ADMIN_EMAILS.includes(u.email) });
@@ -518,4 +520,25 @@ export async function closeIfExpired(lotId) {
     if (sold) tx.set(F.doc(db, 'wins', lotId), { lotId, lotName: d.name, lotNo: d.no || 0, uid: d.leaderUid, paddle: d.leaderPaddle, amount: d.currentPrice, commissionPct: 5, seller: d.ownerName || '', sellerUid: d.ownerUid || '', hall: lotHall(d), status: 'awaiting_payment', createdAt: F.serverTimestamp(), dueAt: Date.now() + 2 * 864e5 });
     return sold ? 'sold' : 'unsold';
   });
+}
+
+/* ---------------- استعادة رمز الدخول + أدوات المدير ---------------- */
+const ADMIN_API = 'https://agora-token.almutiqoud.workers.dev/admin/';
+// العضو يطلب رمزاً جديداً برقم جواله (بدون تسجيل دخول)
+export async function requestReset(phone) {
+  phone = String(phone || '').replace(/[^\d]/g, '');
+  if (!/^05\d{8}$/.test(phone)) throw new Error('phone');
+  if (DEMO) return;
+  const { db, F } = await init();
+  await withTimeout(F.setDoc(F.doc(db, 'resetRequests', phone), { phone, createdAt: F.serverTimestamp() }));
+}
+// المدير: تعيين رمز دخول جديد أو حذف حساب (عبر خدمة Cloudflare)
+export async function adminCall(action, body) {
+  if (DEMO) return { ok: true };
+  const { auth } = await init();
+  const u = auth.currentUser; if (!u) throw new Error('signin');
+  const r = await fetch(ADMIN_API + action, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (await u.getIdToken()) }, body: JSON.stringify({ app: 'almutiqoud', ...body }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) throw Object.assign(new Error(d.error || 'failed'), { code: d.error || 'failed', detail: d.detail });
+  return d;
 }

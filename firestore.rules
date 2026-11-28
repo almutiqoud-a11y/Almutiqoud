@@ -171,6 +171,14 @@ service cloud.firestore {
         && request.resource.data.on is bool
         && (resource == null || resource.data.get('on', false) == false || resource.data.get('hostUid', '') == request.auth.uid);
     }
+    // طلبات استعادة رمز الدخول (بدون تسجيل دخول) — المدير يقرأ ويحذف
+    match /resetRequests/{phone} {
+      allow create, update: if phone.matches('^05[0-9]{8}$')
+        && request.resource.data.keys().hasOnly(['phone', 'createdAt'])
+        && request.resource.data.phone == phone
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if isAdmin();
+    }
     // طلبات البث من التجار
     match /liveRequests/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
