@@ -27,7 +27,6 @@
 
   <nav class="hallbar" id="hallBar" aria-label="قاعات المزاد"></nav>
   <p class="hall-state" id="hallState"></p>
-  <div id="liveHall" style="margin-bottom:14px"></div>
   <div id="winBanner"></div>
   <section class="platform" aria-label="منصة المزاد">
     <div class="hallstage">
@@ -94,7 +93,7 @@ const $ = (id) => document.getElementById(id);
 const HALL = hallOf(new URLSearchParams(location.search).get('hall')).id;
 document.title = hallOf(HALL).name + ' — مزاد المعتق للعود';
 $('scrHall').textContent = hallOf(HALL).name;
-import('./live.js').then((m) => m.mountViewer($('liveHall'), { hall: HALL, compact: true }));
+import('./live.js').then((m) => m.mountScreenLive(document.querySelector('.scr'), { hall: HALL, getUser: () => currentUser }));
 // يظهر اسم القاعة بشكل كبير عند الدخول وعند بدء كل مزاد
 function showHall(sub) {
   const el = $('hallIntro'); el.innerHTML = `<b>${hallOf(HALL).name}</b>${sub ? `<span>${sub}</span>` : ''}`;

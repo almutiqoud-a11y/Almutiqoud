@@ -173,7 +173,7 @@ export function mountBroadcaster(box, { hall, host = null, title = '', onEnd = n
     <label class="field">عنوان البث<input id="lvTitle" placeholder="مثال: مزاد عود كمبودي فاخر" maxlength="60" value="${esc(title)}"></label>
     <div class="live-stage" style="margin:10px 0"><div class="live-video" id="lvPrev"></div><div class="live-wait" id="lvWait">المعاينة تظهر هنا بعد بدء البث</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button type="button" class="btn btn-gold" id="lvGo">● ابدأ البث</button>
+      <button type="button" class="btn btn-gold" id="lvGo">● بدء البث</button>
       <button type="button" class="btn btn-line hidden" id="lvFlip">🔄 تبديل الكاميرا</button>
       <button type="button" class="btn btn-line hidden" id="lvMic">🎙️ كتم الصوت</button>
     </div>
@@ -233,14 +233,14 @@ export function mountBroadcaster(box, { hall, host = null, title = '', onEnd = n
       msg(e.code === 'signin' ? 'سجّل الدخول أولاً ثم حاول مرة أخرى' : e.code === 'notapproved' ? 'البث يحتاج موافقة الإدارة أولاً' : e.code === 'token' ? 'خدمة البث غير جاهزة بعد — تواصل مع الإدارة'
         : /PERMISSION|NotAllowed/i.test(String(e.name || e.code || e.message)) ? 'اسمح للمتصفح باستخدام الكاميرا والميكروفون ثم حاول مرة أخرى'
         : 'تعذّر بدء البث: ' + (e.code || '') + ' — ' + String(e.message || e).slice(0, 220), false);
-    } finally { b.disabled = false; if (!live) b.textContent = '● ابدأ البث'; }
+    } finally { b.disabled = false; if (!live) b.textContent = '● بدء البث'; }
   }
   async function stop(silent) {
     try { cam?.close(); mic?.close(); } catch {} cam = mic = null;
     try { await client?.leave(); } catch {} client = null;
     const wasLive = live; live = false;
     $('lvPrev').innerHTML = ''; $('lvWait').classList.remove('hidden'); $('lvWait').textContent = 'المعاينة تظهر هنا بعد بدء البث';
-    const b = $('lvGo'); b.textContent = '● ابدأ البث'; b.classList.replace('btn-line', 'btn-gold'); b.style.color = ''; b.style.borderColor = '';
+    const b = $('lvGo'); b.textContent = '● بدء البث'; b.classList.replace('btn-line', 'btn-gold'); b.style.color = ''; b.style.borderColor = '';
     $('lvFlip').classList.add('hidden'); $('lvMic').classList.add('hidden');
     ctl.classList.add('hidden'); setFull(false); stage.classList.remove('live-paused');
     const pb = ctl.querySelector('[data-c=pause]'); pb.textContent = '⏸';
@@ -354,7 +354,7 @@ export function mountFloating() {
   pill.innerHTML = '<i></i><span>بث مباشر</span>';
   document.body.appendChild(pill);
   let cur = { on: false }, open = null;
-  watchLive((l) => { cur = l; pill.classList.toggle('hidden', !l.on); if (!l.on && open) open.close(); });
+  watchLive((l) => { cur = l; pill.classList.toggle('hidden', !l.on || (window.__liveHall && window.__liveHall === l.hall)); if (!l.on && open) open.close(); });
   pill.onclick = () => {
     if (open) return;
     const o = document.createElement('div'); o.className = 'live-ov'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'البث المباشر');
@@ -363,4 +363,125 @@ export function mountFloating() {
     open = { close };
     mountViewer(o, { full: true, onClose: close });
   };
+}
+
+/* -------- البث داخل شاشة المزاد (الإطار الأبيض) فوق الشريط العودي -------- */
+// المشاهد يرى البث ويزايد في نفس الوقت. المدير أو التاجر الموافق عليه يبدأ البث من أيقونة سوداء في طرف الشاشة.
+export function mountScreenLive(scr, { hall, getUser }) {
+  window.__liveHall = hall;
+  const tbl = scr.querySelector('.tbl');
+  const box = document.createElement('div'); box.className = 'scr-live hidden';
+  box.innerHTML = `<div class="live-video"></div><div class="live-wait">جارِ الاتصال بالبث…</div>
+    <span class="scr-live-badge"><i></i>بث مباشر</span>
+    <button type="button" class="scr-live-btn snd hidden" aria-label="تشغيل الصوت">🔊</button>
+    <button type="button" class="scr-live-btn fs" aria-label="توسيع الشاشة" title="توسيع الشاشة">⛶</button>`;
+  scr.insertBefore(box, tbl);
+  const vid = box.querySelector('.live-video'), wait = box.querySelector('.live-wait'), snd = box.querySelector('.snd');
+  box.querySelector('.fs').onclick = () => toggleFull(box);
+  let aClient = null, joined = false, audio = null;
+  snd.onclick = () => { try { audio && audio.play(); snd.classList.add('hidden'); } catch {} };
+
+  // ---- المذيع ----
+  let hClient = null, cam = null, mic = null, facing = 'environment', hosting = false, paused = false, myUid = null, req = null;
+  const pill = document.createElement('div'); pill.className = 'bc-dock hidden';
+  pill.innerHTML = `<button type="button" class="live-pill bc-go"><i></i><span>بدء البث</span></button>
+    <div class="bc-tools hidden">
+      <button type="button" class="lc" data-c="pause" aria-label="إيقاف مؤقت" title="إيقاف مؤقت">⏸</button>
+      <button type="button" class="lc" data-c="flip" aria-label="تبديل الكاميرا" title="تبديل الكاميرا">🔄</button>
+      <button type="button" class="lc" data-c="mic" aria-label="كتم الصوت" title="كتم الصوت">🎙</button></div>
+    <p class="bc-msg hidden" role="alert"></p>`;
+  document.body.appendChild(pill);
+  const goBtn = pill.querySelector('.bc-go'), tools = pill.querySelector('.bc-tools'), bmsg = pill.querySelector('.bc-msg');
+  const say = (t) => { bmsg.textContent = t; bmsg.classList.toggle('hidden', !t); if (t) setTimeout(() => bmsg.classList.add('hidden'), 6000); };
+  const hostInfo = () => { const u = getUser(); return u?.isAdmin ? { hostUid: 'admin', hostName: 'المعتق للعود' } : { hostUid: u?.uid, hostName: req?.name || u?.company || u?.name || '' }; };
+  const canHost = () => { const u = getUser(); return !!u && (u.isAdmin || (req && req.status === 'approved' && req.hall === hall)); };
+  const syncPill = () => pill.classList.toggle('hidden', !canHost() && !hosting);
+  let reqWatched = null;
+  setInterval(() => { const u = getUser(); if (u && !u.isAdmin && reqWatched !== u.uid) { reqWatched = u.uid; watchMyLiveReq(u.uid, (r) => { req = r; syncPill(); }); } syncPill(); }, 1000);
+
+  async function startHost() {
+    goBtn.disabled = true; goBtn.querySelector('span').textContent = 'جارِ التشغيل…';
+    try {
+      const u = getUser(); const title = req?.title || scr.querySelector('#lotName')?.textContent?.trim() || '';
+      if (DEMO) { hosting = true; await setLive({ on: true, hall, title, ...hostInfo() }); }
+      else {
+        const [A, tk] = await Promise.all([loadSDK(), getToken('host')]);
+        hClient = A.createClient({ mode: 'live', codec: 'vp8' });
+        await hClient.setClientRole('host');
+        await hClient.join(tk.appId, CHANNEL, tk.token, tk.uid); myUid = tk.uid;
+        [mic, cam] = await A.createMicrophoneAndCameraTracks({ AEC: true, ANS: true }, { encoderConfig: '720p_1', facingMode: facing });
+        await hClient.publish([mic, cam]);
+        hosting = true; await setLive({ on: true, hall, title, startedAt: Date.now(), ...hostInfo() });
+      }
+      goBtn.classList.add('on'); goBtn.querySelector('span').textContent = 'إنهاء البث'; tools.classList.remove('hidden');
+      showLocal();
+    } catch (e) {
+      console.error(e); await stopHost(true);
+      say(e.code === 'notapproved' ? 'البث يحتاج موافقة الإدارة' : /PERMISSION|NotAllowed/i.test(String(e.name || e.code || e.message)) ? 'اسمح للمتصفح باستخدام الكاميرا والميكروفون' : 'تعذّر بدء البث: ' + (e.code || e.message || ''));
+    } finally { goBtn.disabled = false; if (!hosting) goBtn.querySelector('span').textContent = 'بدء البث'; }
+  }
+  async function stopHost(silent) {
+    const was = hosting; hosting = false; paused = false;
+    try { cam?.close(); mic?.close(); } catch {} cam = mic = null;
+    try { await hClient?.leave(); } catch {} hClient = null;
+    goBtn.classList.remove('on'); goBtn.querySelector('span').textContent = 'بدء البث'; tools.classList.add('hidden');
+    tools.querySelector('[data-c=pause]').textContent = '⏸'; box.classList.remove('live-paused');
+    if (was && !silent) { try { await setLive({ on: false, ...hostInfo() }); } catch {} const u = getUser(); if (u && !u.isAdmin) markLiveUsed(u.uid).catch(() => {}); }
+    vid.innerHTML = '';
+  }
+  function showLocal() {
+    leaveAudience();
+    box.classList.remove('hidden'); scr.classList.add('is-live');
+    if (cam) { vid.innerHTML = ''; cam.play(vid, { fit: 'cover', mirror: facing === 'user' }); wait.classList.add('hidden'); }
+    else { wait.classList.remove('hidden'); wait.textContent = 'وضع العرض: تظهر الكاميرا هنا'; }
+  }
+  goBtn.onclick = () => {
+    if (!hosting) return startHost();
+    if (!goBtn.dataset.ok) { goBtn.dataset.ok = 1; goBtn.querySelector('span').textContent = 'تأكيد الإنهاء'; setTimeout(() => { if (hosting) { delete goBtn.dataset.ok; goBtn.querySelector('span').textContent = 'إنهاء البث'; } }, 4000); return; }
+    delete goBtn.dataset.ok; stopHost(false);
+  };
+  tools.onclick = async (e) => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    if (b.dataset.c === 'pause') { paused = !paused; try { await cam?.setEnabled(!paused); await mic?.setEnabled(!paused); } catch {} b.textContent = paused ? '▶' : '⏸'; box.classList.toggle('live-paused', paused); if (!paused) showLocal(); }
+    if (b.dataset.c === 'mic' && mic) { const m = !mic.muted; await mic.setMuted(m); b.classList.toggle('lc-off', m); }
+    if (b.dataset.c === 'flip' && cam) {
+      facing = facing === 'user' ? 'environment' : 'user';
+      try { const A = await loadSDK(); const devs = await A.getCameras(); const want = devs.find((d) => (facing === 'user' ? /front|أمام|user/i : /back|rear|خلف|environment/i).test(d.label)); if (want) await cam.setDevice(want.deviceId); else await cam.setDevice({ facingMode: facing }); } catch (x) { console.warn(x); }
+    }
+  };
+  window.addEventListener('pagehide', () => { if (hosting) setLive({ on: false, ...hostInfo() }); });
+
+  // ---- المشاهد ----
+  async function joinAudience() {
+    if (joined || hosting) return; joined = true;
+    if (DEMO) { wait.classList.remove('hidden'); wait.textContent = 'وضع العرض: يظهر البث هنا'; return; }
+    try {
+      const [A, tk] = await Promise.all([loadSDK(), getToken('audience')]);
+      aClient = A.createClient({ mode: 'live', codec: 'vp8' });
+      await aClient.setClientRole('audience', { level: 1 });
+      aClient.on('user-published', async (u, type) => {
+        await aClient.subscribe(u, type);
+        if (type === 'video') { wait.classList.add('hidden'); u.videoTrack.play(vid, { fit: 'cover' }); }
+        if (type === 'audio') { audio = u.audioTrack; try { audio.play(); } catch {} snd.classList.remove('hidden'); }
+      });
+      aClient.on('user-unpublished', (u, type) => { if (type === 'video') { wait.classList.remove('hidden'); wait.textContent = 'توقف البث مؤقتاً…'; } });
+      await aClient.join(tk.appId, CHANNEL, tk.token, tk.uid);
+      wait.classList.remove('hidden'); wait.textContent = 'بانتظار صورة البث…';
+    } catch (e) { console.warn('live', e); wait.textContent = 'تعذّر تشغيل البث — حدّث الصفحة'; joined = false; }
+  }
+  async function leaveAudience() {
+    if (!joined) return; joined = false;
+    try { await aClient?.leave(); } catch {} aClient = null; audio = null; snd.classList.add('hidden');
+    if (!hosting) vid.innerHTML = '';
+  }
+  watchLive((l) => {
+    const here = !!l.on && l.hall === hall;
+    if (hosting) {
+      const mine = l.on && l.hostUid === hostInfo().hostUid;
+      if (!mine && !DEMO) { stopHost(true); say('أُوقف البث من الإدارة'); }
+      else return;
+    }
+    box.classList.toggle('hidden', !here); scr.classList.toggle('is-live', here);
+    if (here) { wait.classList.remove('hidden'); wait.textContent = 'جارِ الاتصال بالبث…'; joinAudience(); } else leaveAudience();
+  });
 }

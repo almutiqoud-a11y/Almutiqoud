@@ -522,3 +522,27 @@ tbody tr:nth-child(even){background:var(--soft)}
 .live-paused::after{content:"متوقف مؤقتاً";position:absolute;inset:0;display:grid;place-items:center;z-index:1;background:rgba(0,0,0,.6);color:#fff;font-weight:700;font-size:18px}
 @media (max-width:420px){.hud-nums{width:100px}.hud-nums b{font-size:16px}.hud-price{font-size:19px!important}.lc{width:38px;height:38px;font-size:15px}}
 .live-stage:fullscreen .live-hud,.live-stage.live-max .live-hud{display:block}
+/* ===== البث داخل شاشة المزاد ===== */
+.scr.is-live .now{display:none}
+.scr-live{position:relative;flex:1;min-height:0;background:#000;border-radius:4px;overflow:hidden}
+.scr-live.hidden{display:none}
+.scr-live .live-video{position:absolute;inset:0}
+.scr-live .live-video video{object-fit:cover!important}
+.scr-live .live-wait{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:2cqw;color:#d9c9ac;font-size:3.6cqw}
+.scr-live-badge{position:absolute;z-index:2;top:1.4cqw;right:1.4cqw;display:inline-flex;align-items:center;gap:1cqw;background:#B3261E;color:#fff;font-weight:700;font-size:2.8cqw;padding:.4cqw 1.8cqw;border-radius:999px}
+.scr-live-badge i{width:1.4cqw;height:1.4cqw;min-width:5px;min-height:5px;border-radius:50%;background:#fff;animation:hblink 1.2s infinite}
+.scr-live-btn{position:absolute;z-index:2;bottom:1.4cqw;width:7cqw;height:7cqw;min-width:28px;min-height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:3.6cqw;cursor:pointer}
+.scr-live-btn.fs{left:1.4cqw}.scr-live-btn.snd{left:10cqw}
+.scr-live.live-max{position:fixed;inset:0;z-index:1000;border-radius:0}
+.scr-live:fullscreen{border-radius:0}
+.scr-live.live-paused::after{content:"متوقف مؤقتاً";position:absolute;inset:0;display:grid;place-items:center;z-index:1;background:rgba(0,0,0,.6);color:#fff;font-weight:700}
+/* أيقونة بدء البث (للمدير أو التاجر الموافق عليه) */
+.bc-dock{position:fixed;z-index:60;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.bc-dock.hidden{display:none}
+.bc-dock .live-pill{position:static}
+.bc-dock .live-pill i{background:#fff;animation:none}
+.bc-dock .live-pill.on i{background:#ff3b30;animation:hblink 1.2s infinite}
+.bc-tools{display:flex;gap:6px}.bc-tools.hidden{display:none}
+.bc-msg{margin:0;max-width:260px;background:#0d0d0d;color:#fff;font-size:13px;padding:8px 12px;border-radius:12px}
+.bc-msg.hidden{display:none}
+#lvGo.btn-gold{background:#0d0d0d;color:#fff;border-color:#0d0d0d;border-radius:999px}
