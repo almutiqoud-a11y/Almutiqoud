@@ -1,5 +1,5 @@
 // البث المباشر للمزاد عبر Agora — المدير يبث من لوحة التحكم، والجميع يشاهد في الرئيسية وداخل القاعة
-import { DEMO, hallOf, admin, HALLS } from './db.js';
+import { DEMO, hallOf, admin, HALLS, watchAuction, watchLot } from './db.js';
 
 const SDK = 'https://download.agora.io/sdk/release/AgoraRTC_N-4.22.2.js';
 const CHANNEL = 'almutiqoud-live';
@@ -46,6 +46,49 @@ async function getToken(role) {
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/* -------- أرقام المزاد فوق البث (السعر، المزايدات، المضرب المتقدم، الوقت) -------- */
+const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString('en-US'));
+function mountHud(stage, hall) {
+  const h = document.createElement('div'); h.className = 'live-hud';
+  h.innerHTML = `<div class="hud-top"><span class="live-dot"><i></i>مباشر</span><b class="hud-hall"></b></div>
+    <div class="hud-nums"><div class="hud-lot"></div>
+      <div><small>السعر الحالي</small><b class="hud-price">—</b><small>ريال</small></div>
+      <div><small>المضرب المتقدم</small><b class="hud-pad">—</b></div>
+      <div><small>المزايدات</small><b class="hud-bids">0</b></div>
+      <div><small>الوقت</small><b class="hud-time">—</b></div></div>`;
+  stage.appendChild(h);
+  const q = (c) => h.querySelector(c);
+  let lot = null, unLot = null, curId = null, hallId = hall;
+  const setHall = (x) => { hallId = x; q('.hud-hall').textContent = hallOf(x).name; };
+  setHall(hall);
+  let unAu = null;
+  const watch = (x) => {
+    if (unAu) { Promise.resolve(unAu).then((u) => u && u()); }
+    unAu = watchAuction((a) => {
+      const id = a && a.status === 'live' ? a.currentLotId : null;
+      if (id === curId) return; curId = id;
+      if (unLot) { Promise.resolve(unLot).then((u) => u && u()); unLot = null; }
+      lot = null; paint();
+      if (id) unLot = watchLot(id, (l) => { lot = l; paint(); });
+    }, x);
+  };
+  function paint() {
+    h.classList.toggle('no-lot', !lot || lot.status !== 'live');
+    if (!lot) return;
+    q('.hud-lot').textContent = lot.name || '';
+    q('.hud-price').textContent = fmtN(lot.currentPrice ?? lot.openPrice);
+    q('.hud-pad').textContent = lot.leaderPaddle ?? '—';
+    q('.hud-bids').textContent = lot.bidCount || 0;
+  }
+  setInterval(() => {
+    if (!lot || !lot.endsAt) { q('.hud-time').textContent = '—'; return; }
+    const sec = Math.max(0, Math.round((lot.endsAt - Date.now()) / 1000));
+    q('.hud-time').textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  }, 500);
+  watch(hall);
+  return { setHall: (x) => { if (x && x !== hallId) { setHall(x); curId = undefined; watch(x); } } };
+}
+
 /* -------- توسيع الشاشة -------- */
 function toggleFull(stage) {
   const d = document;
@@ -61,7 +104,7 @@ function toggleFull(stage) {
 
 /* -------- المشاهد -------- */
 // يركّب مشغّل البث داخل box ويظهره فقط وقت البث
-export function mountViewer(box, { hall = null, compact = false } = {}) {
+export function mountViewer(box, { hall = null, compact = false, full = false, onClose = null } = {}) {
   let client = null, joined = false, audio = null, state = { on: false };
   box.classList.add('live-box', 'hidden');
   box.innerHTML = `<div class="live-head"><span class="live-dot"><i></i>بث مباشر</span><b class="live-title"></b><span class="live-hall"></span></div>
@@ -70,6 +113,18 @@ export function mountViewer(box, { hall = null, compact = false } = {}) {
     <button type="button" class="live-fs" aria-label="توسيع الشاشة" title="توسيع الشاشة"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
     ${compact ? '' : '<div class="live-foot"><a class="btn btn-gold btn-sm live-enter" href="#">ادخل القاعة وزايد</a></div>'}`;
   const vid = box.querySelector('.live-video'), wait = box.querySelector('.live-wait'), snd = box.querySelector('.live-sound');
+  const stage = box.querySelector('.live-stage');
+  const hud = mountHud(stage, hall || 'riyadh');
+  if (full) {
+    box.classList.add('live-fullbox');
+    stage.classList.add('live-full');
+    const ctl = document.createElement('div'); ctl.className = 'live-ctl';
+    ctl.innerHTML = `<button type="button" class="lc" data-c="close" aria-label="إغلاق" title="إغلاق">✕</button>
+      <a class="lc lc-gold" data-c="bid" href="#" aria-label="ادخل القاعة وزايد" title="ادخل القاعة وزايد">زد</a>`;
+    stage.appendChild(ctl);
+    ctl.querySelector('[data-c=close]').onclick = () => onClose && onClose();
+    box.querySelector('.live-fs').classList.add('hidden');
+  }
   snd.onclick = () => { try { audio && audio.play(); snd.classList.add('hidden'); } catch {} };
   box.querySelector('.live-fs').onclick = () => toggleFull(box.querySelector('.live-stage'));
 
@@ -102,6 +157,8 @@ export function mountViewer(box, { hall = null, compact = false } = {}) {
     box.querySelector('.live-title').textContent = (l.title || 'مزاد المعتق للعود') + (l.hostName && l.hostUid !== 'admin' ? ' — ' + l.hostName : '');
     box.querySelector('.live-hall').textContent = l.hall ? hallOf(l.hall).name : '';
     const a = box.querySelector('.live-enter'); if (a) a.href = 'auction.html?hall=' + (l.hall || 'riyadh');
+    const bz = box.querySelector('[data-c=bid]'); if (bz) bz.href = 'auction.html?hall=' + (l.hall || 'riyadh');
+    hud.setHall(l.hall || 'riyadh');
     join();
   });
 }
@@ -122,6 +179,27 @@ export function mountBroadcaster(box, { hall, host = null, title = '', onEnd = n
     </div>
     <p class="msg hidden" id="lvMsg" role="alert"></p>`;
   const $ = (id) => box.querySelector('#' + id);
+  // وضع ملء الشاشة أثناء البث: الأرقام في طرف، والأزرار الصغيرة في الطرف الآخر
+  const stage = box.querySelector('.live-stage');
+  mountHud(stage, hall);
+  const ctl = document.createElement('div'); ctl.className = 'live-ctl hidden';
+  ctl.innerHTML = `<button type="button" class="lc lc-red" data-c="end" aria-label="إنهاء البث" title="إنهاء البث">■</button>
+    <button type="button" class="lc" data-c="pause" aria-label="إيقاف مؤقت" title="إيقاف مؤقت">⏸</button>
+    <button type="button" class="lc" data-c="flip" aria-label="تبديل الكاميرا" title="تبديل الكاميرا">🔄</button>
+    <button type="button" class="lc" data-c="mic" aria-label="كتم الصوت" title="كتم الصوت">🎙</button>
+    <button type="button" class="lc" data-c="min" aria-label="تصغير" title="تصغير">⤡</button>`;
+  stage.appendChild(ctl);
+  const setFull = (on) => { stage.classList.toggle('live-full', on); document.body.style.overflow = on ? 'hidden' : ''; ctl.querySelector('[data-c=min]').textContent = on ? '⤡' : '⤢'; };
+  let paused = false;
+  ctl.onclick = async (e) => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    const c = b.dataset.c;
+    if (c === 'end') { if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = 'إنهاء؟'; b.classList.add('lc-wide'); setTimeout(() => { delete b.dataset.ok; b.textContent = '■'; b.classList.remove('lc-wide'); }, 4000); return; } setFull(false); stop(false); }
+    if (c === 'pause') { paused = !paused; try { await cam?.setEnabled(!paused); await mic?.setEnabled(!paused); } catch {} b.textContent = paused ? '▶' : '⏸'; b.title = paused ? 'استئناف البث' : 'إيقاف مؤقت'; stage.classList.toggle('live-paused', paused); }
+    if (c === 'flip') $('lvFlip').click();
+    if (c === 'mic') { $('lvMic').click(); setTimeout(() => { b.classList.toggle('lc-off', !!mic?.muted); }, 300); }
+    if (c === 'min') setFull(!stage.classList.contains('live-full'));
+  };
   if (host) box.querySelector('h3 .gold').textContent = hallOf(hall).name + ' — ' + (host.name || '');
   const msg = (t, ok) => { const m = $('lvMsg'); m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); };
   watchLive((l) => {
@@ -149,6 +227,7 @@ export function mountBroadcaster(box, { hall, host = null, title = '', onEnd = n
       b.textContent = '■ إيقاف البث'; b.classList.replace('btn-gold', 'btn-line'); b.style.color = '#B3261E'; b.style.borderColor = '#B3261E';
       $('lvFlip').classList.toggle('hidden', DEMO); $('lvMic').classList.toggle('hidden', DEMO);
       msg('البث شغّال الآن — يشاهده الجميع في الرئيسية وداخل ' + hallOf(hall).name, true);
+      ctl.classList.remove('hidden'); paused = false; setFull(true);
     } catch (e) {
       console.error(e); if (live) { try { await setLive({ on: false, ...hostInfo }); } catch {} } await stop(true);
       msg(e.code === 'signin' ? 'سجّل الدخول أولاً ثم حاول مرة أخرى' : e.code === 'notapproved' ? 'البث يحتاج موافقة الإدارة أولاً' : e.code === 'token' ? 'خدمة البث غير جاهزة بعد — تواصل مع الإدارة'
@@ -163,6 +242,8 @@ export function mountBroadcaster(box, { hall, host = null, title = '', onEnd = n
     $('lvPrev').innerHTML = ''; $('lvWait').classList.remove('hidden'); $('lvWait').textContent = 'المعاينة تظهر هنا بعد بدء البث';
     const b = $('lvGo'); b.textContent = '● ابدأ البث'; b.classList.replace('btn-line', 'btn-gold'); b.style.color = ''; b.style.borderColor = '';
     $('lvFlip').classList.add('hidden'); $('lvMic').classList.add('hidden');
+    ctl.classList.add('hidden'); setFull(false); stage.classList.remove('live-paused');
+    const pb = ctl.querySelector('[data-c=pause]'); pb.textContent = '⏸';
     if (wasLive && !silent) { try { await setLive({ on: false, hostUid: hostInfo.hostUid, hostName: hostInfo.hostName }); } catch {} }
     if (!silent) { msg('تم إيقاف البث', true); if (wasLive && onEnd) onEnd(); }
   }
@@ -276,13 +357,10 @@ export function mountFloating() {
   watchLive((l) => { cur = l; pill.classList.toggle('hidden', !l.on); if (!l.on && open) open.close(); });
   pill.onclick = () => {
     if (open) return;
-    const o = document.createElement('div'); o.className = 'overlay live-ov';
-    o.innerHTML = `<div class="modal live-modal" role="dialog" aria-modal="true" aria-label="البث المباشر"><button class="icon-btn close" aria-label="إغلاق">×</button><div class="lv-box"></div></div>`;
-    document.body.appendChild(o);
-    mountViewer(o.querySelector('.lv-box'));
-    const close = () => { o.remove(); open = null; };
+    const o = document.createElement('div'); o.className = 'live-ov'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'البث المباشر');
+    document.body.appendChild(o); document.body.style.overflow = 'hidden';
+    const close = () => { o.remove(); open = null; document.body.style.overflow = ''; };
     open = { close };
-    o.querySelector('.close').onclick = close;
-    o.addEventListener('click', (e) => { if (e.target === o) close(); });
+    mountViewer(o, { full: true, onClose: close });
   };
 }
